@@ -1,7 +1,7 @@
 import threading
 from django.utils.timezone import now
 from requests import models
-from django.contrib.postgres.fields import HStoreField
+# from django.contrib.postgres.fields import HStoreField
 
 
 class HistoryLogging(object):
@@ -52,5 +52,6 @@ class HistoricalRecord(models.Model):
         ('~', 'Updated'),
         ('-', 'Deleted'),
     ))
-    data = HStoreField()
+    # data = HStoreField()
+    data = None
 

@@ -1,6 +1,6 @@
 import threading
+from django.db import models
 from django.utils.timezone import now
-from requests import models
 # from django.contrib.postgres.fields import HStoreField
 
 

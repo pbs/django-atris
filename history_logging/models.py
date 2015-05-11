@@ -1,6 +1,7 @@
 import threading
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
+from django.utils import importlib
 from django.utils.timezone import now
 # from django.contrib.postgres.fields import HStoreField
 
@@ -19,6 +20,18 @@ class HistoryLogging(object):
                 return None
             except AttributeError:
                 return None
+
+    def finalize(self, sender, **kwargs):
+        history_model = self.create_history_model(sender)
+        module = importlib.import_module(self.module)
+        setattr(module, history_model.__name__, history_model)
+
+        # The HistoricalRecords object will be discarded,
+        # so the signal handlers can't use weak references.
+        models.signals.post_save.connect(self.post_save, sender=sender,
+                                         weak=False)
+        models.signals.post_delete.connect(self.post_delete, sender=sender,
+                                           weak=False)
 
     def post_save(self, instance, created, **kwargs):
         if not created and hasattr(instance, 'skip_history_when_saving'):
@@ -40,8 +53,8 @@ class HistoryLogging(object):
             data=data
         )
 
-class HistoricalRecord(models.Model):
 
+class HistoricalRecord(models.Model):
     model_id = models.IntegerField()
     history_object_qualified_path = models.CharField(
         max_length=120, null=False, blank=False

@@ -14,4 +14,5 @@ def register(
         records = records_class(**records_config)
         records.manager_name = manager_name
         records.module = app and ("%s.models" % app) or model.__module__
+        records.finalize(model)
         models.registered_models[model._meta.db_table] = model

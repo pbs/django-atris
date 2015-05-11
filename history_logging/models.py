@@ -152,3 +152,22 @@ class HistoricalRecord(models.Model):
     def get_history_object_class_name(self):
         return self.history_object_qual_path.split('.')[-1]
 
+    @classmethod
+    def by_model_and_model_id(cls, model, model_id):
+        return cls.objects.filter(
+            model_id=model_id,
+            history_object_qualified_path=fullname(model)
+        )
+
+    @classmethod
+    def by_model(cls, model):
+        print fullname(model)
+        return cls.objects.filter(
+            history_object_qualified_path=fullname(model)
+        )
+
+    def previous_versions(self):
+        return HistoricalRecord.objects.filter(
+            model_id=self.model_id,
+            history_object_qualified_path=self.history_object_qualified_path
+        )

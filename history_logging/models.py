@@ -53,5 +53,4 @@ class HistoricalRecord(models.Model):
         ('-', 'Deleted'),
     ))
     data = HStoreField()
-    data = None
 

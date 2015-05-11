@@ -1,4 +1,5 @@
 import threading
+from django.contrib.postgres.fields import HStoreField
 from django.db import models
 from django.utils.timezone import now
 # from django.contrib.postgres.fields import HStoreField

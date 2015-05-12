@@ -38,8 +38,6 @@ class HistoryLogging(object):
                                            weak=False)
 
     def post_save(self, instance, created, **kwargs):
-        if not created and hasattr(instance, 'skip_history_when_saving'):
-            return
         if not kwargs.get('raw', False):
             self.create_historical_record(instance, created and '+' or '~')
 

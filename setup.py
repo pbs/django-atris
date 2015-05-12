@@ -15,7 +15,5 @@ setup(
     author='Bogdan Andrei Pop',
     url='https://github.com/bogdanpop/django-history-logging',
     packages=["history_logging"],
-    tests_require=tests_require,
     include_package_data=True,
-    test_suite='runtests.main',
 )

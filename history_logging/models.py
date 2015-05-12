@@ -132,7 +132,6 @@ class HistoricalRecord(models.Model):
                 '{}'.format(attr.replace('_', ' ').capitalize())
                 for (attr, val) in object_snapshot.data.items()
                 if (attr, val) not in previous_version.data.items()
-                and not attr.startswith(('history_', '_'))
             ]
         )
         return diff_string

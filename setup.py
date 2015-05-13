@@ -16,4 +16,5 @@ setup(
     url='https://github.com/bogdanpop/django-history-logging',
     packages=["history_logging"],
     include_package_data=True,
+    requires=['django'],
 )

@@ -1,9 +1,10 @@
 import threading
 import json
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-from django.utils.importlib import import_module
 from django.utils.timezone import now
 from django.core import serializers
 
@@ -50,11 +51,11 @@ class HistoryLogging(object):
         data = serializers.serialize('json', [instance])
         struct = json.loads(data)
         data = dict(
-            (key, unicode(val)) for key, val in struct[0]['fields'].items())
+            (key, unicode(val)) for key, val in struct[0]['fields'].items()
+        )
 
         HistoricalRecord.objects.create(
-            model_id=instance.id,
-            history_object_qualified_path=fullname(instance),
+            content_object=instance,
             history_date=history_date,
             history_type=history_type,
             history_user=history_user,
@@ -62,20 +63,11 @@ class HistoryLogging(object):
         )
 
 
-def fullname(o):
-    """
-    Return the full qualified name of a given class.
-    :rtype : String
-    :param o: Class object.
-    """
-    return u"{0}.{1}".format(o.__module__, o.__class__.__name__)
-
-
 class HistoricalRecord(models.Model):
-    model_id = models.IntegerField()
-    history_object_qualified_path = models.CharField(
-        max_length=120, null=False, blank=False
-    )
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
     history_date = models.DateTimeField()
     history_user = models.CharField(max_length=50)
     history_type = models.CharField(max_length=1, choices=(
@@ -88,35 +80,9 @@ class HistoricalRecord(models.Model):
     def __unicode__(self):
         return '{0} {1} id={2}'.format(
             self.get_history_type_display(),
-            self.history_object_qualified_path,
-            self.model_id
+            self.content_type.model,
+            self.object_id
         )
-
-    def get_history_object_class(self):
-        """
-        Return the class object from the history object dotted path.
-
-        :raises: ValueError if the class could not be loaded
-        """
-        try:
-            module_path, class_name = self.history_object_qualified_path.rsplit(
-                ".", 1)
-        except ValueError:
-            raise ValueError("Invalid class dotted path: %s"
-                             % self.history_object_qual_path)
-
-        try:
-            module = import_module(module_path)
-        except ImportError:
-            raise ValueError(
-                "Failed to import module: %s" % module_path)
-
-        class_object = getattr(module, class_name, None)
-        if class_object is None:
-            raise ValueError(
-                "No %s class found in module %s" % (class_name, module_path))
-
-        return class_object
 
     def get_superficial_diff_string(self):
         object_snapshot = self.get_current_snapshot()
@@ -141,30 +107,28 @@ class HistoricalRecord(models.Model):
 
     def get_previous_version_snapshot(self):
         return HistoricalRecord.objects.filter(
-            model_id=self.model_id,
-            history_object_qualified_path=self.history_object_qualified_path,
+            object_id=self.object_id,
+            content_type=self.content_type,
             id__lt=self.id
         ).order_by('-id').first()
-
-    def get_history_object_class_name(self):
-        return self.history_object_qual_path.split('.')[-1]
 
     @classmethod
     def by_model_and_model_id(cls, model, model_id):
         return cls.objects.filter(
-            model_id=model_id,
-            history_object_qualified_path=fullname(model)
+            object_id=model_id,
+            content_type__model=model._meta.model_name,
+            content_type__app_label=model._meta.app_label
         )
 
     @classmethod
     def by_model(cls, model):
-        print fullname(model)
         return cls.objects.filter(
-            history_object_qualified_path=fullname(model)
+            content_type__model=model._meta.model_name,
+            content_type__app_label=model._meta.app_label
         )
 
     def previous_versions(self):
         return HistoricalRecord.objects.filter(
-            model_id=self.model_id,
-            history_object_qualified_path=self.history_object_qualified_path
+            object_id=self.object_id,
+            content_type=self.content_type
         )

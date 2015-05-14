@@ -1,12 +1,12 @@
 import threading
-import json
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
 from django.utils.timezone import now
-from django.core import serializers
+
+registered_models = []
 
 
 class HistoryLogging(object):
@@ -30,7 +30,7 @@ class HistoryLogging(object):
         models.signals.class_prepared.connect(self.finalize, sender=cls)
 
     def finalize(self, sender, **kwargs):
-
+        registered_models.append(sender)
         # The HistoricalRecords object will be discarded,
         # so the signal handlers can't use weak references.
         models.signals.post_save.connect(self.post_save, sender=sender,
@@ -48,11 +48,9 @@ class HistoryLogging(object):
     def create_historical_record(self, instance, history_type):
         history_date = getattr(instance, '_history_date', now())
         history_user = self.get_history_user(instance)
-        data = serializers.serialize('json', [instance])
-        struct = json.loads(data)
-        data = dict(
-            (key, unicode(val)) for key, val in struct[0]['fields'].items()
-        )
+        data = dict((unicode(field.attname),
+                     unicode(getattr(instance, field.attname)))
+                    for field in instance._meta.fields)
 
         HistoricalRecord.objects.create(
             content_object=instance,
@@ -69,7 +67,7 @@ class HistoricalRecord(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
 
     history_date = models.DateTimeField()
-    history_user = models.CharField(max_length=50)
+    history_user = models.CharField(max_length=50, null=True)
     history_type = models.CharField(max_length=1, choices=(
         ('+', 'Created'),
         ('~', 'Updated'),

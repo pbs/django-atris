@@ -12,6 +12,16 @@ registered_models = []
 class HistoryLogging(object):
     thread = threading.local()
 
+    def __init__(self, additional_data=None):
+        """
+        :param additional_data: str : This field specifies which field in the
+        model refers to additional data. Done this way in order to avoid any
+        conflicts with any possible already existing fields and allow for
+        greater flexibility. If left with the default value of None, the library
+        doesn't check for any additional data.
+        """
+        self.additional_data = additional_data
+
     def get_history_user(self, instance):
         """Get the modifying user from instance or middleware."""
         try:
@@ -52,7 +62,9 @@ class HistoryLogging(object):
                      unicode(getattr(instance, field.attname)))
                     for field in instance._meta.fields)
 
-        additional_data = getattr(instance, 'additional_data')
+        additional_data = None
+        if self.additional_data:
+            additional_data = getattr(instance, self.additional_data)
 
         HistoricalRecord.objects.create(
             content_object=instance,

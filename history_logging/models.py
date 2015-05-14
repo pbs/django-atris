@@ -52,12 +52,15 @@ class HistoryLogging(object):
                      unicode(getattr(instance, field.attname)))
                     for field in instance._meta.fields)
 
+        additional_data = getattr(instance, 'additional_data')
+
         HistoricalRecord.objects.create(
             content_object=instance,
             history_date=history_date,
             history_type=history_type,
             history_user=history_user,
-            data=data
+            data=data,
+            additional_data=additional_data
         )
 
 
@@ -73,7 +76,9 @@ class HistoricalRecord(models.Model):
         ('~', 'Updated'),
         ('-', 'Deleted'),
     ))
+
     data = HStoreField()
+    additional_data = HStoreField(null=True)
 
     def __unicode__(self):
         return '{0} {1} id={2}'.format(

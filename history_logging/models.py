@@ -22,8 +22,8 @@ class HistoryLogging(object):
         """
         self.additional_data = additional_data
 
-    def get_history_user(self, instance):
-        """Get the modifying user from instance or middleware."""
+    def get_history_user(self):
+        """Get the modifying user from the middleware."""
         return self.thread.request.user
 
     def contribute_to_class(self, cls, name):
@@ -60,6 +60,7 @@ class HistoryLogging(object):
             content_object=instance,
             history_type=history_type,
             history_user=history_user,
+            history_user=history_user.id,
             data=data,
             additional_data=additional_data
         )
@@ -72,6 +73,7 @@ class HistoricalRecord(models.Model):
 
     history_date = models.DateTimeField(auto_now_add=True)
     history_user = models.CharField(max_length=50, null=True)
+    history_user_id = models.PositiveIntegerField()
     history_type = models.CharField(max_length=1, choices=(
         ('+', 'Created'),
         ('~', 'Updated'),

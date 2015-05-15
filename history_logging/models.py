@@ -24,15 +24,7 @@ class HistoryLogging(object):
 
     def get_history_user(self, instance):
         """Get the modifying user from instance or middleware."""
-        try:
-            return instance._history_user
-        except AttributeError:
-            try:
-                if self.thread.request.user.is_authenticated():
-                    return self.thread.request.user
-                return None
-            except AttributeError:
-                return None
+        return self.thread.request.user
 
     def contribute_to_class(self, cls, name):
         self.manager_name = name
@@ -40,7 +32,8 @@ class HistoryLogging(object):
         models.signals.class_prepared.connect(self.finalize, sender=cls)
 
     def finalize(self, sender, **kwargs):
-        registered_models.append(sender)
+        if sender not in registered_models:
+            registered_models.append(sender)
         # The HistoricalRecords object will be discarded,
         # so the signal handlers can't use weak references.
         models.signals.post_save.connect(self.post_save, sender=sender,
@@ -56,19 +49,15 @@ class HistoryLogging(object):
         self.create_historical_record(instance, '-')
 
     def create_historical_record(self, instance, history_type):
-        history_date = getattr(instance, '_history_date', now())
         history_user = self.get_history_user(instance)
         data = dict((unicode(field.attname),
                      unicode(getattr(instance, field.attname)))
                     for field in instance._meta.fields)
 
-        additional_data = None
-        if self.additional_data:
-            additional_data = getattr(instance, self.additional_data)
+        additional_data = getattr(instance, self.additional_data)
 
         HistoricalRecord.objects.create(
             content_object=instance,
-            history_date=history_date,
             history_type=history_type,
             history_user=history_user,
             data=data,
@@ -81,7 +70,7 @@ class HistoricalRecord(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
 
-    history_date = models.DateTimeField()
+    history_date = models.DateTimeField(auto_now_add=True)
     history_user = models.CharField(max_length=50, null=True)
     history_type = models.CharField(max_length=1, choices=(
         ('+', 'Created'),
@@ -123,9 +112,8 @@ class HistoricalRecord(models.Model):
     def get_previous_version_snapshot(self):
         return HistoricalRecord.objects.filter(
             object_id=self.object_id,
-            content_type=self.content_type,
-            id__lt=self.id
-        ).order_by('-id').first()
+            content_type=self.content_type
+        ).order_by('-history_date').first()
 
     @classmethod
     def by_model_and_model_id(cls, model, model_id):

@@ -2,7 +2,6 @@ from optparse import make_option
 
 from django.core.management import BaseCommand
 from ... import models
-from django.utils.timezone import now
 from history_logging.models import HistoricalRecord
 
 
@@ -35,7 +34,6 @@ class Command(BaseCommand):
             ))
         historical_instances = [
             HistoricalRecord(
-                history_date=now(),
                 history_user=None,
                 history_type='+',
                 content_object=instance,

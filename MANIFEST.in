@@ -1,5 +1,6 @@
 include MANIFEST.in
 include *.rst
 include *.txt
+include *.py
 recursive-include docs *.rst
 recursive-include simple_history/templates *

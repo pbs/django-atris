@@ -5,13 +5,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
 
-registered_models = []
+registered_models = {}
 
 
 class HistoryLogging(object):
     thread = threading.local()
 
-    def __init__(self, additional_data=None):
+    def __init__(self, additional_data=''):
         """
         :param additional_data: str : This field specifies which field in the
         model refers to additional data. Done this way in order to avoid any
@@ -23,7 +23,12 @@ class HistoryLogging(object):
 
     def get_history_user(self):
         """Get the modifying user from the middleware."""
-        return self.thread.request.user
+        try:
+            if self.thread.request.user.is_authenticated():
+                return self.thread.request.user
+            return None
+        except AttributeError:
+            return None
 
     def contribute_to_class(self, cls, name):
         self.manager_name = name
@@ -32,7 +37,7 @@ class HistoryLogging(object):
 
     def finalize(self, sender, **kwargs):
         if sender not in registered_models:
-            registered_models.append(sender)
+            registered_models[sender] = self.additional_data
         # The HistoricalRecords object will be discarded,
         # so the signal handlers can't use weak references.
         models.signals.post_save.connect(self.post_save, sender=sender,
@@ -48,21 +53,22 @@ class HistoryLogging(object):
         self.create_historical_record(instance, '-')
 
     def create_historical_record(self, instance, history_type):
-        history_user = self.get_history_user(instance)
+        history_user = self.get_history_user()
+        history_user_id = history_user.id if history_user else None
         data = dict((unicode(field.attname),
                      unicode(getattr(instance, field.attname)))
                     for field in instance._meta.fields)
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)
-            in getattr(instance, self.additional_data)
+            in getattr(instance, self.additional_data, {}).items()
         )
 
         HistoricalRecord.objects.create(
             content_object=instance,
             history_type=history_type,
             history_user=history_user,
-            history_user_id=history_user.id,
+            history_user_id=history_user_id,
             data=data,
             additional_data=additional_data
         )
@@ -75,7 +81,7 @@ class HistoricalRecord(models.Model):
 
     history_date = models.DateTimeField(auto_now_add=True)
     history_user = models.CharField(max_length=50, null=True)
-    history_user_id = models.PositiveIntegerField()
+    history_user_id = models.PositiveIntegerField(null=True)
     history_type = models.CharField(max_length=1, choices=(
         ('+', 'Created'),
         ('~', 'Updated'),
@@ -106,7 +112,7 @@ class HistoricalRecord(models.Model):
                 '{}'.format(attr.replace('_', ' ').capitalize())
                 for (attr, val) in object_snapshot.data.items()
                 if (attr, val) not in previous_version.data.items()
-            ]
+                ]
         )
         return diff_string
 

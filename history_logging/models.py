@@ -4,7 +4,8 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-import pytz as pytz
+from django.db.models.query import QuerySet
+from model_utils.managers import PassThroughManager
 
 registered_models = {}
 
@@ -56,24 +57,9 @@ class HistoryLogging(object):
     def create_historical_record(self, instance, history_type):
         history_user = self.get_history_user()
         history_user_id = history_user.id if history_user else None
-        data = dict()
-        for field in instance._meta.fields:
-            key = unicode(field.attname)
-
-            value = getattr(instance, field.attname)
-            if hasattr(value, 'astimezone'):
-                value = value.astimezone(pytz.utc)
-            value = unicode(value)
-
-            data[key] = value
-
-
-        # data = dict((unicode(field.attname),
-        #              unicode(getattr(instance, field.attname).astimezone(
-        #                  timezone('UTC')
-        #              if hasattr(getattr(instance, field.attname), 'astimezone')
-        #              else getattr(instance, field.attname))
-        #             for field in instance._meta.fields)))
+        data = dict((unicode(field.attname),
+                     unicode(getattr(instance, field.attname)))
+                    for field in instance._meta.fields)
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)
@@ -89,6 +75,20 @@ class HistoryLogging(object):
             additional_data=additional_data
         )
 
+class HistoricalRecordQuerySet(QuerySet):
+
+    def by_model_and_model_id(self, model, model_id):
+        return self.by_model(model).filter(object_id=model_id)
+
+    def by_model(self, model):
+        return self.filter(
+            content_type__model=model._meta.model_name,
+            content_type__app_label=model._meta.app_label
+        )
+
+
+HistoricalRecordManager = PassThroughManager.for_queryset_class(
+    HistoricalRecordQuerySet)
 
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
@@ -106,6 +106,7 @@ class HistoricalRecord(models.Model):
 
     data = HStoreField()
     additional_data = HStoreField(null=True)
+    objects = HistoricalRecordManager()
 
     def __unicode__(self):
         return '{0} {1} id={2}'.format(
@@ -142,23 +143,9 @@ class HistoricalRecord(models.Model):
             id__lt=self.id
         ).order_by('-history_date').first()
 
-    @classmethod
-    def by_model_and_model_id(cls, model, model_id):
-        return cls.objects.filter(
-            object_id=model_id,
-            content_type__model=model._meta.model_name,
-            content_type__app_label=model._meta.app_label
-        )
-
-    @classmethod
-    def by_model(cls, model):
-        return cls.objects.filter(
-            content_type__model=model._meta.model_name,
-            content_type__app_label=model._meta.app_label
-        )
-
     def previous_versions(self):
         return HistoricalRecord.objects.filter(
             object_id=self.object_id,
             content_type=self.content_type
         )
+

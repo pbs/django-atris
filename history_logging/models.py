@@ -122,7 +122,8 @@ class HistoricalRecord(models.Model):
     def get_previous_version_snapshot(self):
         return HistoricalRecord.objects.filter(
             object_id=self.object_id,
-            content_type=self.content_type
+            content_type=self.content_type,
+            id__lt=self.id
         ).order_by('-history_date').first()
 
     @classmethod

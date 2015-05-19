@@ -4,7 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-from time import timezone
+import pytz as pytz
 
 registered_models = {}
 
@@ -62,7 +62,7 @@ class HistoryLogging(object):
 
             value = getattr(instance, field.attname)
             if hasattr(value, 'astimezone'):
-                value = value.astimezone(timezone('UTC'))
+                value = value.astimezone(pytz.utc)
             value = unicode(value)
 
             data[key] = value

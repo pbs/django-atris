@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
+from time import timezone
 
 registered_models = {}
 
@@ -55,9 +56,24 @@ class HistoryLogging(object):
     def create_historical_record(self, instance, history_type):
         history_user = self.get_history_user()
         history_user_id = history_user.id if history_user else None
-        data = dict((unicode(field.attname),
-                     unicode(getattr(instance, field.attname)))
-                    for field in instance._meta.fields)
+        data = dict()
+        for field in instance._meta.fields:
+            key = unicode(field.attname)
+
+            value = getattr(instance, field.attname)
+            if hasattr(value, 'astimezone'):
+                value = value.astimezone(timezone('UTC'))
+            value = unicode(value)
+
+            data[key] = value
+
+
+        # data = dict((unicode(field.attname),
+        #              unicode(getattr(instance, field.attname).astimezone(
+        #                  timezone('UTC')
+        #              if hasattr(getattr(instance, field.attname), 'astimezone')
+        #              else getattr(instance, field.attname))
+        #             for field in instance._meta.fields)))
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)

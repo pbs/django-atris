@@ -62,7 +62,7 @@ class HistoryLogging(object):
             content_object=instance,
             history_type=history_type,
             history_user=history_user,
-            history_user=history_user.id,
+            history_user_id=history_user.id,
             data=data,
             additional_data=additional_data
         )

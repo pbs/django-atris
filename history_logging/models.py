@@ -4,7 +4,6 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
-from django.utils.timezone import now
 
 registered_models = []
 
@@ -54,7 +53,10 @@ class HistoryLogging(object):
                      unicode(getattr(instance, field.attname)))
                     for field in instance._meta.fields)
 
-        additional_data = getattr(instance, self.additional_data)
+        additional_data = dict(
+            (unicode(key), unicode(value)) for (key, value)
+            in getattr(instance, self.additional_data)
+        )
 
         HistoricalRecord.objects.create(
             content_object=instance,

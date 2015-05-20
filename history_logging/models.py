@@ -116,7 +116,7 @@ class HistoricalRecord(models.Model):
         )
 
     class Meta:
-        ordering = ['-  history_date']
+        ordering = ['-history_date']
 
     def get_superficial_diff_string(self):
         object_snapshot = self.get_current_snapshot()

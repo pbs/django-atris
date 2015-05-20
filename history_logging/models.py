@@ -120,7 +120,8 @@ class HistoricalRecord(models.Model):
         diff_string = u'{} '.format(object_snapshot.get_history_type_display())
 
         if u'Updated' not in diff_string:
-            return diff_string
+            return '{action}{object}'.format(action=diff_string,
+                                             object=self.content_type.model)
 
         previous_version = self.get_previous_version_snapshot()
 

@@ -99,9 +99,9 @@ class HistoricalRecord(models.Model):
     history_user = models.CharField(max_length=50, null=True)
     history_user_id = models.PositiveIntegerField(null=True)
     history_type = models.CharField(max_length=1, choices=(
-        ('+', 'Created'),
-        ('~', 'Updated'),
-        ('-', 'Deleted'),
+        ('+', 'Create'),
+        ('~', 'Update'),
+        ('-', 'Delete'),
     ))
 
     data = HStoreField()
@@ -117,9 +117,9 @@ class HistoricalRecord(models.Model):
 
     def get_superficial_diff_string(self):
         object_snapshot = self.get_current_snapshot()
-        diff_string = u'{} '.format(object_snapshot.get_history_type_display())
+        diff_string = u'{}d '.format(object_snapshot.get_history_type_display())
 
-        if u'Updated' not in diff_string:
+        if u'Update' not in diff_string:
             return '{action}{object}'.format(
                 action=diff_string,
                 object=self.content_type.model.capitalize()

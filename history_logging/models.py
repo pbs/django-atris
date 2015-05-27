@@ -49,6 +49,7 @@ class HistoryLogging(object):
                                          weak=False)
         models.signals.post_delete.connect(self.post_delete, sender=sender,
                                            weak=False)
+        setattr(sender, self.manager_name, HistoryManager(sender))
 
     def post_save(self, instance, created, **kwargs):
         if not kwargs.get('raw', False):
@@ -79,8 +80,20 @@ class HistoryLogging(object):
             additional_data=additional_data
         )
 
-class HistoricalRecordQuerySet(QuerySet):
 
+class HistoryManager(object):
+    def __init__(self, type):
+        self.type = type
+
+    def __get__(self, instance, model):
+        if instance and model:
+            return HistoricalRecord.objects.by_model_and_model_id(model,
+                                                                  instance.id)
+        if model:
+            return HistoricalRecord.objects.by_model(model)
+
+
+class HistoricalRecordQuerySet(QuerySet):
     def by_model_and_model_id(self, model, model_id):
         return self.by_model(model).filter(object_id=model_id)
 
@@ -93,6 +106,7 @@ class HistoricalRecordQuerySet(QuerySet):
 
 HistoricalRecordManager = PassThroughManager.for_queryset_class(
     HistoricalRecordQuerySet)
+
 
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
@@ -158,4 +172,3 @@ class HistoricalRecord(models.Model):
             object_id=self.object_id,
             content_type=self.content_type
         )
-

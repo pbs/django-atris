@@ -13,15 +13,18 @@ registered_models = {}
 class HistoryLogging(object):
     thread = threading.local()
 
-    def __init__(self, additional_data=''):
+    def __init__(self, additional_data={}, excluded_fields=[]):
         """
-        :param additional_data: str : This field specifies which field in the
-        model refers to additional data. Done this way in order to avoid any
-        conflicts with any possible already existing fields and allow for
-        greater flexibility. If left with the default value of None, the library
-        doesn't check for any additional data.
+        :param additional_data: This argument is a dict which is used to
+        associate any additional data for a model.
+        :type additional_data: dict
+
+        :param excluded_fields: This argument is a list which contains the
+         names of the fields that are not to be kept a history of.
+        :type excluded_fields: list
         """
         self.additional_data = additional_data
+        self.excluded_fields = excluded_fields
 
     def get_history_user(self):
         """Get the modifying user from the middleware."""
@@ -59,11 +62,12 @@ class HistoryLogging(object):
         history_user_id = history_user.id if history_user else None
         data = dict((unicode(field.attname),
                      unicode(getattr(instance, field.attname)))
-                    for field in instance._meta.fields)
+                    for field in instance._meta.fields if field.attname not in
+                    self.excluded_fields)
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)
-            in getattr(instance, self.additional_data, {}).items()
+            in self.additional_data.items()
         )
 
         HistoricalRecord.objects.create(

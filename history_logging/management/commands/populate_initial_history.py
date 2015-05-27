@@ -18,6 +18,8 @@ class Command(BaseCommand):
         ),
     )
 
+    # TODO: Add option to set the additional data
+    #  from the command line interface
     def handle(self, *args, **options):
         for (model, additional_data_field) in models.registered_models.items():
             self.bulk_history_create(model, additional_data_field)

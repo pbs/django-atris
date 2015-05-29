@@ -1,8 +1,9 @@
 from optparse import make_option
 
 from django.core.management import BaseCommand
-from ... import models
 from history_logging.models import HistoricalRecord
+
+from ... import models
 
 
 class Command(BaseCommand):
@@ -21,10 +22,14 @@ class Command(BaseCommand):
     # TODO: Add option to set the additional data
     #  from the command line interface
     def handle(self, *args, **options):
-        for (model, additional_data_field) in models.registered_models.items():
-            self.bulk_history_create(model, additional_data_field)
+        for (model, model_specific_info) in models.registered_models.items():
+            additional_data_field = model_specific_info['additional_data']
+            excluded_fields = model_specific_info['excluded_fields']
+            self.bulk_history_create(model, additional_data_field,
+                                     excluded_fields)
 
-    def bulk_history_create(self, model, additional_data_field):
+    def bulk_history_create(self, model, additional_data_field={},
+                            excluded_fields=[]):
         """Save a copy of all instances to the historical model."""
         if HistoricalRecord.objects.filter(
                 content_type__app_label=model._meta.app_label,
@@ -34,8 +39,6 @@ class Command(BaseCommand):
                 msg=self.EXISTING_HISTORY_FOUND,
                 model=model,
             ))
-        if not additional_data_field:
-            additional_data_field = ''
         historical_instances = [
             HistoricalRecord(
                 history_user=None,
@@ -43,10 +46,11 @@ class Command(BaseCommand):
                 content_object=instance,
                 data=dict((unicode(field.attname),
                            unicode(getattr(instance, field.attname)))
-                          for field in instance._meta.fields),
+                          for field in instance._meta.fields
+                          if field.attname not in excluded_fields),
                 additional_data=dict(
                     (unicode(key), unicode(value)) for (key, value)
-                    in getattr(instance, additional_data_field, {}).items()
+                    in additional_data_field.items()
                 )
             ) for instance in model.objects.all()]
         HistoricalRecord.objects.bulk_create(historical_instances)

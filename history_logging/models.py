@@ -42,7 +42,10 @@ class HistoryLogging(object):
 
     def finalize(self, sender, **kwargs):
         if sender not in registered_models:
-            registered_models[sender] = self.additional_data
+            registered_models[sender] = {
+                'additional_data': self.additional_data,
+                'excluded_fields': self.excluded_fields
+            }
         # The HistoricalRecords object will be discarded,
         # so the signal handlers can't use weak references.
         models.signals.post_save.connect(self.post_save, sender=sender,
@@ -133,8 +136,8 @@ class HistoricalRecord(models.Model):
             self.object_id
         )
 
-    class Meta:
-        ordering = ['-history_date']
+    # class Meta:
+    #     ordering = ['-history_date']
 
     def get_superficial_diff_string(self):
         object_snapshot = self.get_current_snapshot()

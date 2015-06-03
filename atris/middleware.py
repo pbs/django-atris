@@ -1,4 +1,4 @@
-from history_logging.models import HistoryLogging
+from atris.models import HistoryLogging
 
 
 class LoggingRequestMiddleware(object):

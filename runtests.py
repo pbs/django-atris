@@ -19,8 +19,8 @@ installed_apps = [
     'django.contrib.sessions',
     'django.contrib.admin',
     'django.contrib.postgres',
-    'history_logging',
-    'history_logging.tests',
+    'atris',
+    'atris.tests',
 ]
 
 DEFAULT_SETTINGS = dict(
@@ -40,7 +40,7 @@ DEFAULT_SETTINGS = dict(
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
-        'history_logging.middleware.LoggingRequestMiddleware',
+        'atris.middleware.LoggingRequestMiddleware',
     ],
 )
 

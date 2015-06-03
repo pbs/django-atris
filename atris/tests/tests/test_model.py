@@ -2,8 +2,8 @@ from unittest import TestCase
 
 from django.utils.timezone import now
 
-from history_logging.models import HistoricalRecord
-from history_logging.tests.models import Poll, Choice, Voter
+from atris.models import HistoricalRecord
+from atris.tests.models import Poll, Choice, Voter
 
 
 class TestHistoryLogging(TestCase):

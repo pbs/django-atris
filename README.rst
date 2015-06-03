@@ -88,7 +88,7 @@ Example of usage in code:
 
 * Get the global history information (ordered by history_date desc)::
 
-    >>>from history_logging.models import HistoricalRecord
+    >>>from atris.models import HistoricalRecord
     >>>HistoricalRecord.objects.all()
     [<HistoricalRecord: Create bar id=1>, <HistoricalRecord: Create foo id=2>]
 

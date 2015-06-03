@@ -1,7 +1,7 @@
 from optparse import make_option
 
 from django.core.management import BaseCommand
-from history_logging.models import HistoricalRecord
+from atris.models import HistoricalRecord
 
 from ... import models
 

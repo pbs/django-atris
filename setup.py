@@ -1,5 +1,5 @@
 from setuptools import setup
-import history_logging
+import atris
 
 setup(
     name='django-atris',
@@ -8,7 +8,7 @@ setup(
     long_description='Django history logger that keeps track of changes on a'
                      'global level.',
     author='Bogdan Andrei Pop',
-    url='https://github.com/bogdanpop/django-history-logging',
+    url='https://github.com/pbs/django-atris',
     packages=["atris"],
     include_package_data=True,
     requires=['django'],

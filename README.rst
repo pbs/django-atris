@@ -1,9 +1,9 @@
 
 
-django-history-logging
+django-atris
 ======================
 
-django-history-logging stores a snapshot of each tracked model on create/
+django-atris stores a snapshot of each tracked model on create/
 update/delete operations.
 
 Snapshots are available in a global form as well.

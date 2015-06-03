@@ -17,8 +17,8 @@ Integration guide
 -----------------
 
 In order to use the app you must do the following:
- * Add django-history-logging to INSTALLED_APPS in settings
- * Add 'history_logging.middleware.LoggingRequestMiddleware' to MIDDLEWARE_CLASSES in order for the app to be able to get the user which made the changes
+ * Add atris to INSTALLED_APPS in settings
+ * Add 'atris.middleware.LoggingRequestMiddleware' to MIDDLEWARE_CLASSES in order for the app to be able to get the user which made the changes
  * Put a field (named as you wish) in the model class that you desire to track that contains a HistoryLogging instance (i.e. history = HistoryLogging() )
 
 Additional features:

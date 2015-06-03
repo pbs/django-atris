@@ -3,4 +3,4 @@ include *.rst
 include *.txt
 include *.py
 include management/commands/*
-recursive-include history_logging/management *
+recursive-include atris/management *

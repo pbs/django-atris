@@ -2,13 +2,14 @@ from setuptools import setup
 import history_logging
 
 setup(
-    name='django-history-logging',
-    version=history_logging.__version__,
-    description='History logging.',
-    long_description='History logging.',
+    name='django-atris',
+    version=atris.__version__,
+    description='Django history logging.',
+    long_description='Django history logger that keeps track of changes on a'
+                     'global level.',
     author='Bogdan Andrei Pop',
     url='https://github.com/bogdanpop/django-history-logging',
-    packages=["history_logging"],
+    packages=["atris"],
     include_package_data=True,
     requires=['django'],
 )

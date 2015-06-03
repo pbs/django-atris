@@ -39,6 +39,8 @@ class Command(BaseCommand):
                 msg=self.EXISTING_HISTORY_FOUND,
                 model=model,
             ))
+            return
+
         historical_instances = [
             HistoricalRecord(
                 history_user=None,

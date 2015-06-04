@@ -56,14 +56,14 @@ For starters, the fields made available to you when inspecting a history instanc
 Example of usage in code:
 * Classes we will use in example::
 
-    >>>class Foo(models.Model):
+    >>> class Foo(models.Model):
     ...   field_1 = models.CharField(max_length=255)
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
     ...   excluded_fields = ['last_modified']
     ...   history = HistoryLogging(excluded_fields=excluded_fields)
 
-    >>>class Bar(models.Model):
+    >>> class Bar(models.Model):
     ...   field_1 = models.CharField(max_length=255)
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
@@ -73,52 +73,52 @@ Example of usage in code:
     ...   history = HistoryLogging(additional_data=additional_data,
     ...                            excluded_fields=excluded_fields)
 
-    >>>foo = Foo.objects.create(field_1='aaa', field_2=0)
-    >>>foo_1 = Foo.objects.create(field_1='bar', field_2=1)
+    >>> foo = Foo.objects.create(field_1='aaa', field_2=0)
+    >>> foo_1 = Foo.objects.create(field_1='bar', field_2=1)
 
 * Get all the history information for the first model instance that was just created::
 
-    >>>foo.history.all()
+    >>> foo.history.all()
     [<HistoricalRecord: Create foo id=1>]
 
 * Get all the history information for the Foo model::
 
-    >>>Foo.history.all()
+    >>> Foo.history.all()
     [<HistoricalRecord: Create foo id=1>, <HistoricalRecord: Create foo id=2>]
 
 * Get the global history information (ordered by history_date desc)::
 
-    >>>from atris.models import HistoricalRecord
-    >>>HistoricalRecord.objects.all()
+    >>> from atris.models import HistoricalRecord
+    >>> HistoricalRecord.objects.all()
     [<HistoricalRecord: Create bar id=1>, <HistoricalRecord: Create foo id=2>]
 
 * Get all the history information for the Bar model::
 
     Bar.objects.create(field_1='aaa', field_2=0)
-    >>>Bar.history.all()
+    >>> Bar.history.all()
     [<HistoricalRecord: Create bar id=1>]
 
 * Get the global history information again::
 
-    >>>HistoricalRecord.objects.all()
+    >>> HistoricalRecord.objects.all()
     [<HistoricalRecord: Create bar id=1>, <HistoricalRecord: Create foo id=2>,
      <HistoricalRecord: Create foo id=1>]
 
 * Another way of getting history for a model::
 
-    >>>HistoricalRecord.objects.by_model(Foo)
+    >>> HistoricalRecord.objects.by_model(Foo)
     [<HistoricalRecord: Create foo id=1>, <HistoricalRecord: Create foo id=2>]
 
 * Another way of getting history for an instance of a model useful for deleted objects that you still want a history for::
 
-    >>>HistoricalRecord.objects.by_model_and_model_id(Foo, foo.id)
+    >>> HistoricalRecord.objects.by_model_and_model_id(Foo, foo.id)
     [<HistoricalRecord: Create foo id=1>]
 
 * Get the snapshot of the bar instance created::
 
-    >>>bar.history.first().data
+    >>> bar.history.first().data
     {u'field_1':u'aaa',u'field_2':u'0'}
 * Get the additional data of the bar instance::
 
-    >>>bar.history.first().additional_data
+    >>> bar.history.first().additional_data
     {u'modified_from':u'code'}

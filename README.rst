@@ -1,7 +1,7 @@
 
 
 django-atris
-======================
+============
 
 django-atris stores a snapshot of each tracked model on create/
 update/delete operations.

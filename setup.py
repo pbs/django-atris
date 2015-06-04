@@ -8,6 +8,7 @@ setup(
     long_description='Django history logger that keeps track of changes on a'
                      'global level.',
     author='Bogdan Andrei Pop',
+    email='bpop2232@gmail.com',
     url='https://github.com/pbs/django-atris',
     packages=["atris"],
     include_package_data=True,

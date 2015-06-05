@@ -11,7 +11,7 @@ Snapshots are available in a global form as well.
 This app requires:
    - Django>=1.7
    - Postgresql
-   - Python>=2.6
+   - Python>=2.7
 
 Integration guide
 -----------------

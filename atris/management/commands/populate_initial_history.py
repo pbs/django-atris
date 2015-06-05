@@ -1,9 +1,9 @@
 from optparse import make_option
 
 from django.core.management import BaseCommand
-from atris.models import HistoricalRecord
 
-from ... import models
+from atris import models
+from atris.models import HistoricalRecord
 
 
 class Command(BaseCommand):

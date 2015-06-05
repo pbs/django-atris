@@ -44,6 +44,7 @@ DEFAULT_SETTINGS = dict(
     ],
 )
 
+
 def main():
     if not settings.configured:
         settings.configure(**DEFAULT_SETTINGS)

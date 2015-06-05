@@ -5,7 +5,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
 from django.db.models.query import QuerySet
-from model_utils.managers import PassThroughManager
 
 registered_models = {}
 
@@ -107,10 +106,6 @@ class HistoricalRecordQuerySet(QuerySet):
         )
 
 
-HistoricalRecordManager = PassThroughManager.for_queryset_class(
-    HistoricalRecordQuerySet)
-
-
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
@@ -127,13 +122,13 @@ class HistoricalRecord(models.Model):
 
     data = HStoreField()
     additional_data = HStoreField(null=True)
-    objects = HistoricalRecordManager()
+    objects = HistoricalRecordQuerySet.as_manager()
 
     def __unicode__(self):
-        return '{0} {1} id={2}'.format(
-            self.get_history_type_display(),
-            self.content_type.model,
-            self.object_id
+        return '{history_type} {content_type} id={object_id}'.format(
+            history_type=self.get_history_type_display(),
+            content_type=self.content_type.model,
+            object_id=self.object_id
         )
 
     class Meta:
@@ -141,7 +136,7 @@ class HistoricalRecord(models.Model):
 
     def get_superficial_diff_string(self):
         object_snapshot = self.get_current_snapshot()
-        diff_string = u'{}d '.format(object_snapshot.get_history_type_display())
+        diff_string = '{}d '.format(object_snapshot.get_history_type_display())
 
         if u'Update' not in diff_string:
             return '{action}{object}'.format(
@@ -151,13 +146,11 @@ class HistoricalRecord(models.Model):
 
         previous_version = self.get_previous_version_snapshot()
 
-        diff_string += ', '.join(
-            [
-                '{}'.format(attr.replace('_', ' ').capitalize())
-                for (attr, val) in object_snapshot.data.items()
-                if (attr, val) not in previous_version.data.items()
-                ]
-        )
+        diff_string += ', '.join([
+            '{}'.format(attr.replace('_', ' ').capitalize())
+            for (attr, val) in object_snapshot.data.items()
+            if (attr, val) not in previous_version.data.items()
+        ])
         return diff_string
 
     def get_current_snapshot(self):

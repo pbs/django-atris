@@ -6,7 +6,7 @@ from setuptools import find_packages
 
 setup(
     name='django-atris',
-    version='0.1.2',
+    version='0.1.3',
     description='Django history logging.',
     long_description=(
         'Django history logger that keeps track of changes on a global '
@@ -14,9 +14,9 @@ setup(
     author='Bogdan Andrei Pop',
     author_email='bpop2232@gmail.com',
     url='https://github.com/pbs/django-atris',
-    packages=find_packages('atris'),
-    package_dir={'': 'atris'},
-    py_modules=[splitext(basename(path))[0] for path in glob('atris/*.py')],
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
     include_package_data=True,
     zip_safe=False,
     install_requires=[

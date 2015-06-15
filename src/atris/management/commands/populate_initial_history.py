@@ -1,7 +1,6 @@
 from optparse import make_option
 
 from django.core.management import BaseCommand
-
 from atris import models
 from atris.models import HistoricalRecord
 
@@ -41,18 +40,29 @@ class Command(BaseCommand):
             ))
             return
 
-        historical_instances = [
-            HistoricalRecord(
+        sentinel = object()
+        historical_instances = []
+
+        for instance in model.objects.all():
+            data = {}
+            for field in instance._meta.fields:
+                if field.attname not in excluded_fields:
+                    key = unicode(field.attname)
+                    value = getattr(instance, field.attname, sentinel)
+                    if value is not None and value is not sentinel:
+                        value = unicode(value)
+                    elif value is sentinel:
+                        print 'Field "{}" is invalid.'.format(key)
+                    data[key] = value
+            historical_record = HistoricalRecord(
                 history_user=None,
                 history_type='+',
                 content_object=instance,
-                data=dict((unicode(field.attname),
-                           unicode(getattr(instance, field.attname)))
-                          for field in instance._meta.fields
-                          if field.attname not in excluded_fields),
+                data=data,
                 additional_data=dict(
                     (unicode(key), unicode(value)) for (key, value)
                     in additional_data_field.items()
                 )
-            ) for instance in model.objects.all()]
+            )
+            historical_instances.append(historical_record)
         HistoricalRecord.objects.bulk_create(historical_instances)

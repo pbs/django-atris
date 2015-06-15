@@ -62,11 +62,18 @@ class HistoryLogging(object):
 
     def create_historical_record(self, instance, history_type):
         history_user = self.get_history_user()
+        sentinel = object()
         history_user_id = history_user.id if history_user else None
-        data = dict((unicode(field.attname),
-                     unicode(getattr(instance, field.attname)))
-                    for field in instance._meta.fields if field.attname not in
-                    self.excluded_fields)
+        data = {}
+        for field in instance._meta.fields:
+            if field.attname not in self.excluded_fields:
+                key = unicode(field.attname)
+                value = getattr(instance, field.attname, sentinel)
+                if value is not None and value is not sentinel:
+                    value = unicode(value)
+                elif value is sentinel:
+                    print 'Field "{}" is invalid.'.format(key)
+                data[key] = value
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)

@@ -1,6 +1,6 @@
 from django.db import models
 
-from atris.models import HistoryLogging
+from src.atris.models import HistoryLogging
 
 
 class Poll(models.Model):

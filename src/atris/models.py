@@ -25,14 +25,13 @@ class HistoryLogging(object):
         self.additional_data = additional_data
         self.excluded_fields = excluded_fields
 
-    def get_history_user(self):
+    def get_history_user(self, instance):
         """Get the modifying user from the middleware."""
         try:
             if self.thread.request.user.is_authenticated():
                 return self.thread.request.user
-            return None
         except AttributeError:
-            return None
+            return getattr(instance, 'history_user', None)
 
     def contribute_to_class(self, cls, name):
         self.manager_name = name
@@ -61,7 +60,7 @@ class HistoryLogging(object):
         self.create_historical_record(instance, '-')
 
     def create_historical_record(self, instance, history_type):
-        history_user = self.get_history_user()
+        history_user = self.get_history_user(instance)
         sentinel = object()
         history_user_id = history_user.id if history_user else None
         data = {}

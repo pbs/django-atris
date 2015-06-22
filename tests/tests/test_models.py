@@ -162,3 +162,88 @@ class TestModelsBasicFunctionality(TestCase):
         choice.save()
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
+
+
+class TestHistoryLoggingOrdering(TestCase):
+
+    def test_global_history_is_ordered_by_history_date(self):
+        # clear the history state prior to test starting
+        HistoricalRecord.objects.all().delete()
+        polls = []
+        choices = []
+        for i in range(10):
+            poll = Poll.objects.create(question='question_{}'.format(i),
+                                       pub_date=now())
+            choice = Choice.objects.create(poll=poll,
+                                           choice='choice_{}'.format(i),
+                                           votes=0)
+            polls.append(poll)
+            choices.append(choice)
+
+        self.assertEquals(len(polls + choices),
+                          HistoricalRecord.objects.all().count())
+
+        for i in range(10):
+            polls[i].question += '_updated'
+            polls[i].save()
+            choices[i].choice += '_updated'
+            choices[i].save()
+
+        self.assertEquals(len(polls + choices) * 2,  # take updates into account
+                          HistoricalRecord.objects.all().count())
+
+        oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
+        for entry in oldest_twenty_history_entries:
+            self.assertEquals(u'+', entry.history_type)
+
+        newest_twenty_history_entries = HistoricalRecord.objects.all()[:20]
+        for entry in newest_twenty_history_entries:
+            self.assertEquals(u'~', entry.history_type)
+
+    def test_model_history_is_ordered_by_history_date(self):
+        # clear the history state prior to test starting
+        HistoricalRecord.objects.all().delete()
+        polls = []
+        choices = []
+        for i in range(10):
+            poll = Poll.objects.create(question='question_{}'.format(i),
+                                       pub_date=now())
+            choice = Choice.objects.create(poll=poll,
+                                           choice='choice_{}'.format(i),
+                                           votes=0)
+            polls.append(poll)
+            choices.append(choice)
+
+        self.assertEquals(len(polls + choices),
+                          HistoricalRecord.objects.all().count())
+
+        for i in range(10):
+            polls[i].question += '_updated'
+            polls[i].save()
+            choices[i].choice += '_updated'
+            choices[i].save()
+
+        self.assertEquals(len(polls + choices) * 2,  # take updates into account
+                          HistoricalRecord.objects.all().count())
+
+        oldest_ten_model_history_entries = Poll.history.all()[10:]
+
+        for entry in oldest_ten_model_history_entries:
+            self.assertEquals(u'+', entry.history_type)
+
+        newest_ten_model_history_entries = Poll.history.all()[:10]
+        for entry in newest_ten_model_history_entries:
+            self.assertEquals(u'~', entry.history_type)
+
+        self.assertEquals(u'+', Choice.history.last().history_type)
+        self.assertEquals(u'~', Choice.history.first().history_type)
+
+    def test_model_instance_history_is_ordered_by_history_date(self):
+        poll = Poll.objects.create(question='question',
+                                   pub_date=now())
+
+        poll.question += '_updated'
+        poll.save()
+
+        self.assertEquals(u'+', poll.history.last().history_type)
+        self.assertEquals(u'~', poll.history.first().history_type)

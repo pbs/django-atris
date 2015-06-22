@@ -9,21 +9,24 @@ from django.db.models.query import QuerySet
 registered_models = {}
 
 
+# noinspection PyProtectedMember,PyAttributeOutsideInit
 class HistoryLogging(object):
     thread = threading.local()
 
-    def __init__(self, additional_data={}, excluded_fields=[]):
+    def __init__(self, additional_data_param_name='',
+                 excluded_fields_param_name=''):
         """
-        :param additional_data: This argument is a dict which is used to
-        associate any additional data for a model.
-        :type additional_data: dict
+        :param additional_data_param_name: String used to determine which field
+         on the object contains a dict holding any additional data.
+        :type additional_data_param_name: str
 
-        :param excluded_fields: This argument is a list which contains the
-         names of the fields that are not to be kept a history of.
-        :type excluded_fields: list
+        :param excluded_fields_param_name: String used to determine which field
+            on the object contains a list holding the names of the fields which
+            should not be tracked in the history.
+        :type excluded_fields_param_name: str
         """
-        self.additional_data = additional_data
-        self.excluded_fields = excluded_fields
+        self.additional_data_param_name = additional_data_param_name
+        self.excluded_fields_param_name = excluded_fields_param_name
 
     def get_history_user(self, instance):
         """Get the modifying user from the middleware."""
@@ -41,8 +44,8 @@ class HistoryLogging(object):
     def finalize(self, sender, **kwargs):
         if sender not in registered_models:
             registered_models[sender] = {
-                'additional_data': self.additional_data,
-                'excluded_fields': self.excluded_fields
+                'additional_data_param_name': self.additional_data_param_name,
+                'excluded_fields_param_name': self.excluded_fields_param_name
             }
         # The HistoricalRecords object will be discarded,
         # so the signal handlers can't use weak references.
@@ -50,7 +53,7 @@ class HistoryLogging(object):
                                          weak=False)
         models.signals.post_delete.connect(self.post_delete, sender=sender,
                                            weak=False)
-        setattr(sender, self.manager_name, HistoryManager(sender))
+        setattr(sender, self.manager_name, HistoryManager())
 
     def post_save(self, instance, created, **kwargs):
         if not kwargs.get('raw', False):
@@ -64,8 +67,9 @@ class HistoryLogging(object):
         sentinel = object()
         history_user_id = history_user.id if history_user else None
         data = {}
+        excluded_fields = getattr(instance, self.excluded_fields_param_name, [])
         for field in instance._meta.fields:
-            if field.attname not in self.excluded_fields:
+            if field.attname not in excluded_fields:
                 key = unicode(field.attname)
                 value = getattr(instance, field.attname, sentinel)
                 if value is not None and value is not sentinel:
@@ -76,7 +80,7 @@ class HistoryLogging(object):
 
         additional_data = dict(
             (unicode(key), unicode(value)) for (key, value)
-            in self.additional_data.items()
+            in getattr(instance, self.additional_data_param_name, {}).items()
         )
 
         HistoricalRecord.objects.create(
@@ -90,8 +94,6 @@ class HistoryLogging(object):
 
 
 class HistoryManager(object):
-    def __init__(self, type):
-        self.type = type
 
     def __get__(self, instance, model):
         if instance and model:
@@ -106,11 +108,14 @@ class HistoricalRecordQuerySet(QuerySet):
         return self.by_model(model).filter(object_id=model_id)
 
     def by_model(self, model):
+        # noinspection PyProtectedMember
         return self.filter(
             content_type__model=model._meta.model_name,
             content_type__app_label=model._meta.app_label
         )
 
+    def most_recent(self):
+        return self.first()
 
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)

@@ -11,8 +11,7 @@ class Poll(models.Model):
 
     additional_data = {'where_from': 'Import'}  # default
 
-    history = HistoryLogging(additional_data=additional_data,
-                             excluded_fields=excluded_fields)
+    history = HistoryLogging('additional_data', 'excluded_fields')
 
 
 class Choice(models.Model):
@@ -20,7 +19,7 @@ class Choice(models.Model):
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
 
-    history = HistoryLogging()
+    history = HistoryLogging(additional_data_param_name='additional_data')
 
 
 class Voter(models.Model):

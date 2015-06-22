@@ -1,6 +1,7 @@
 from optparse import make_option
 
 from django.core.management import BaseCommand
+
 from atris import models
 from atris.models import HistoricalRecord
 
@@ -22,8 +23,12 @@ class Command(BaseCommand):
     #  from the command line interface
     def handle(self, *args, **options):
         for (model, model_specific_info) in models.registered_models.items():
-            additional_data_field = model_specific_info['additional_data']
-            excluded_fields = model_specific_info['excluded_fields']
+            additional_data_param_name = model_specific_info[
+                'additional_data_param_name']
+            excluded_fields_param_name = model_specific_info[
+                'excluded_fields_param_name']
+            additional_data_field = getattr(model, additional_data_param_name, {})  # noqa
+            excluded_fields = getattr(model, excluded_fields_param_name, [])
             self.bulk_history_create(model, additional_data_field,
                                      excluded_fields)
 

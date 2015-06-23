@@ -145,7 +145,7 @@ class HistoricalRecord(models.Model):
     class Meta:
         ordering = ['-history_date']
 
-    def get_superficial_diff_string(self):
+    def get_diff_to_prev_string(self):
         object_snapshot = self.get_current_snapshot()
         diff_string = '{}d '.format(object_snapshot.get_history_type_display())
 
@@ -162,6 +162,10 @@ class HistoricalRecord(models.Model):
             for (attr, val) in object_snapshot.data.items()
             if (attr, val) not in previous_version.data.items()
         ])
+
+        if diff_string == 'Updated ':
+            diff_string += 'with no change'
+
         return diff_string
 
     def get_current_snapshot(self):

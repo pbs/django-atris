@@ -48,7 +48,7 @@ class TestModelsBasicFunctionality(TestCase):
                           self.poll.history.first().data['question'])
         self.assertEquals(
             'Updated Question',
-            self.poll.history.first().get_superficial_diff_string()
+            self.poll.history.first().get_diff_to_prev_string()
         )
         self.assertEquals(u'~', self.poll.history.first().history_type)
 
@@ -57,7 +57,7 @@ class TestModelsBasicFunctionality(TestCase):
                           self.choice.history.first().data['choice'])
         self.assertEquals(
             'Updated Choice',
-            self.choice.history.first().get_superficial_diff_string()
+            self.choice.history.first().get_diff_to_prev_string()
         )
         self.assertEquals(u'~', self.choice.history.first().history_type)
 
@@ -72,7 +72,7 @@ class TestModelsBasicFunctionality(TestCase):
                           self.choice.history.first().data['poll_id'])
         self.assertEquals(
             'Updated Poll id, Choice',
-            self.choice.history.first().get_superficial_diff_string()
+            self.choice.history.first().get_diff_to_prev_string()
         )
         self.assertEquals(u'~', self.poll.history.first().history_type)
 

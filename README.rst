@@ -61,7 +61,7 @@ Example of usage in code:
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
     ...   excluded_fields = ['last_modified']
-    ...   history = HistoryLogging(excluded_fields=excluded_fields)
+    ...   history = HistoryLogging(excluded_fields='excluded_fields')
 
     >>> class Bar(models.Model):
     ...   field_1 = models.CharField(max_length=255)
@@ -70,8 +70,7 @@ Example of usage in code:
           # setting this specifies the default value for your additional data
     ...   additional_data = {'modified_from': 'code'}
     ...   excluded_fields = ['last_modified']
-    ...   history = HistoryLogging(additional_data=additional_data,
-    ...                            excluded_fields=excluded_fields)
+    ...   history = HistoryLogging('additional_data', 'excluded_fields')
 
     >>> foo = Foo.objects.create(field_1='aaa', field_2=0)
     >>> foo_1 = Foo.objects.create(field_1='bar', field_2=1)
@@ -122,3 +121,9 @@ Example of usage in code:
 
     >>> bar.history.first().additional_data
     {u'modified_from':u'code'}
+* If you have a situation where the user cannot be determined from the django middleware you can also do the following::
+
+    >>> bar.history_user = User(username='username')
+    >>> bar.save()
+    >>> bar.history.first().history_user
+    u'username'

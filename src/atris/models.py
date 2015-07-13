@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from __future__ import print_function
+from django.utils import six
+
+str = str if six.PY2 else str
+
 import threading
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -70,16 +77,16 @@ class HistoryLogging(object):
         excluded_fields = getattr(instance, self.excluded_fields_param_name, [])
         for field in instance._meta.fields:
             if field.attname not in excluded_fields:
-                key = unicode(field.attname)
+                key = field.attname
                 value = getattr(instance, field.attname, sentinel)
                 if value is not None and value is not sentinel:
-                    value = unicode(value)
+                    value = str(value)
                 elif value is sentinel:
-                    print 'Field "{}" is invalid.'.format(key)
+                    self.stdout.write(('Field "{}" is invalid.'.format(key)))
                 data[key] = value
 
         additional_data = dict(
-            (unicode(key), unicode(value)) for (key, value)
+            (key, str(value)) for (key, value)
             in getattr(instance, self.additional_data_param_name, {}).items()
         )
 
@@ -117,6 +124,7 @@ class HistoricalRecordQuerySet(QuerySet):
     def most_recent(self):
         return self.first()
 
+
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
@@ -149,7 +157,7 @@ class HistoricalRecord(models.Model):
         object_snapshot = self.get_current_snapshot()
         diff_string = '{}d '.format(object_snapshot.get_history_type_display())
 
-        if u'Update' not in diff_string:
+        if 'Update' not in diff_string:
             return '{action}{object}'.format(
                 action=diff_string,
                 object=self.content_type.model.capitalize()

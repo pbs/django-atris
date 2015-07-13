@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from __future__ import print_function
+
+str = str if six.PY2 else str
+
 from optparse import make_option
 
 from django.core.management import BaseCommand
@@ -52,12 +58,13 @@ class Command(BaseCommand):
             data = {}
             for field in instance._meta.fields:
                 if field.attname not in excluded_fields:
-                    key = unicode(field.attname)
+                    key = field.attname
                     value = getattr(instance, field.attname, sentinel)
                     if value is not None and value is not sentinel:
-                        value = unicode(value)
+                        value = str(value)
                     elif value is sentinel:
-                        print 'Field "{}" is invalid.'.format(key)
+                        self.stdout.write(
+                            ('Field "{}" is invalid.'.format(key)))
                     data[key] = value
             historical_record = HistoricalRecord(
                 history_user=None,
@@ -65,7 +72,7 @@ class Command(BaseCommand):
                 content_object=instance,
                 data=data,
                 additional_data=dict(
-                    (unicode(key), unicode(value)) for (key, value)
+                    (key, str(value)) for (key, value)
                     in additional_data_field.items()
                 )
             )

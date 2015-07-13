@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from __future__ import print_function
+from django.utils import six
+
+str = str if six.PY2 else str
+
 from unittest import TestCase
 from django.contrib.auth.models import User
 
@@ -25,13 +32,13 @@ class TestModelsBasicFunctionality(TestCase):
     def test_history_create_for_tracked_models(self):
         self.assertEquals(self.choice.id,
                           self.choice.history.last().object_id)
-        self.assertEquals(u'+', self.choice.history.last().history_type)
-        self.assertEquals(unicode(self.choice.poll_id),
+        self.assertEquals('+', self.choice.history.last().history_type)
+        self.assertEquals(str(self.choice.poll_id),
                           self.choice.history.last().data['poll_id'])
 
         self.assertEquals(self.poll.id,
                           self.poll.history.last().object_id)
-        self.assertEquals(u'+', self.poll.history.last().history_type)
+        self.assertEquals('+', self.poll.history.last().history_type)
         self.assertEquals(self.poll.question,
                           self.poll.history.last().data['question'])
         self.assertEquals(0, HistoricalRecord.objects.by_model(Voter).count())
@@ -50,7 +57,7 @@ class TestModelsBasicFunctionality(TestCase):
             'Updated Question',
             self.poll.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(u'~', self.poll.history.first().history_type)
+        self.assertEquals('~', self.poll.history.first().history_type)
 
         self.assertEquals(2, self.choice.history.count())
         self.assertEquals(self.choice.choice,
@@ -59,7 +66,7 @@ class TestModelsBasicFunctionality(TestCase):
             'Updated Choice',
             self.choice.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(u'~', self.choice.history.first().history_type)
+        self.assertEquals('~', self.choice.history.first().history_type)
 
         new_poll = Poll.objects.create(question='question', pub_date=now())
 
@@ -68,13 +75,13 @@ class TestModelsBasicFunctionality(TestCase):
         self.choice.save()
 
         self.assertEquals(3, self.choice.history.count())
-        self.assertEquals(unicode(self.choice.poll_id),
+        self.assertEquals(str(self.choice.poll_id),
                           self.choice.history.first().data['poll_id'])
         self.assertEquals(
             'Updated Poll id, Choice',
             self.choice.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(u'~', self.poll.history.first().history_type)
+        self.assertEquals('~', self.poll.history.first().history_type)
 
     def test_history_delete_for_tracked_models(self):
         poll = Poll.objects.create(question='question', pub_date=now())
@@ -194,11 +201,11 @@ class TestHistoryLoggingOrdering(TestCase):
 
         oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
         for entry in oldest_twenty_history_entries:
-            self.assertEquals(u'+', entry.history_type)
+            self.assertEquals('+', entry.history_type)
 
         newest_twenty_history_entries = HistoricalRecord.objects.all()[:20]
         for entry in newest_twenty_history_entries:
-            self.assertEquals(u'~', entry.history_type)
+            self.assertEquals('~', entry.history_type)
 
     def test_model_history_is_ordered_by_history_date(self):
         # clear the history state prior to test starting
@@ -229,14 +236,14 @@ class TestHistoryLoggingOrdering(TestCase):
         oldest_ten_model_history_entries = Poll.history.all()[10:]
 
         for entry in oldest_ten_model_history_entries:
-            self.assertEquals(u'+', entry.history_type)
+            self.assertEquals('+', entry.history_type)
 
         newest_ten_model_history_entries = Poll.history.all()[:10]
         for entry in newest_ten_model_history_entries:
-            self.assertEquals(u'~', entry.history_type)
+            self.assertEquals('~', entry.history_type)
 
-        self.assertEquals(u'+', Choice.history.last().history_type)
-        self.assertEquals(u'~', Choice.history.first().history_type)
+        self.assertEquals('+', Choice.history.last().history_type)
+        self.assertEquals('~', Choice.history.first().history_type)
 
     def test_model_instance_history_is_ordered_by_history_date(self):
         poll = Poll.objects.create(question='question',
@@ -245,5 +252,5 @@ class TestHistoryLoggingOrdering(TestCase):
         poll.question += '_updated'
         poll.save()
 
-        self.assertEquals(u'+', poll.history.last().history_type)
-        self.assertEquals(u'~', poll.history.first().history_type)
+        self.assertEquals('+', poll.history.last().history_type)
+        self.assertEquals('~', poll.history.first().history_type)

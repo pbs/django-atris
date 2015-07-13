@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from django.utils import six
 
-str = str if six.PY2 else str
+str = unicode if six.PY2 else str
 
 import threading
 

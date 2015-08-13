@@ -165,11 +165,11 @@ class HistoricalRecord(models.Model):
 
         previous_version = self.get_previous_version_snapshot()
 
-        diff_string += ', '.join([
+        diff_string += ', '.join(sorted([
             '{}'.format(attr.replace('_', ' ').capitalize())
             for (attr, val) in object_snapshot.data.items()
             if (attr, val) not in previous_version.data.items()
-        ])
+        ]))
 
         if diff_string == 'Updated ':
             diff_string += 'with no change'

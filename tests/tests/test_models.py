@@ -78,7 +78,7 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals(str(self.choice.poll_id),
                           self.choice.history.first().data['poll_id'])
         self.assertEquals(
-            'Updated Poll id, Choice',
+            'Updated Choice, Poll id',
             self.choice.history.first().get_diff_to_prev_string()
         )
         self.assertEquals('~', self.poll.history.first().history_type)

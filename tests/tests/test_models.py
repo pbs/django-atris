@@ -170,6 +170,37 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
 
+    def test_history_user_uses_user_available_info_priority(self):
+        choice = Choice.objects.create(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        self.assertIsNone(choice.history.first().history_user)
+        self.assertIsNone(choice.history.first().history_user_id)
+
+        # If all the info regarding user is available, the full name
+        # should be used as the history_user string as a priority.
+        choice.history_user = User(username='test_user', first_name='John',
+                                   last_name='Doe', email='john.doe@mail.com')
+        choice.save()
+        self.assertEquals('John Doe', choice.history.first().history_user)
+        self.assertIsNone(choice.history.first().history_user_id)
+
+        # If only the email and username are provided, the email should be used
+        choice.history_user = User(id=1, email='john.doe@mail.com',
+                                   username='test_user_2')
+        choice.save()
+        self.assertEquals('john.doe@mail.com',
+                          choice.history.first().history_user)
+        self.assertEquals(1, choice.history.first().history_user_id)
+
+        # When only the user name is provided, use that.
+        choice.history_user = User(id=1, username='test_user_2')
+        choice.save()
+        self.assertEquals('test_user_2', choice.history.first().history_user)
+        self.assertEquals(1, choice.history.first().history_user_id)
+
 
 class TestHistoryLoggingOrdering(TestCase):
 

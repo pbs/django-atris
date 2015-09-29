@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('history_date', models.DateTimeField(auto_now_add=True)),
                 ('history_user', models.CharField(max_length=50, null=True)),
                 ('history_user_id', models.PositiveIntegerField(null=True)),
-                ('history_type', models.CharField(max_length=1, choices=[(b'+', b'Create'), (b'~', b'Update'), (b'-', b'Delete')])),
+                ('history_type', models.CharField(max_length=1, choices=[('+', 'Create'), ('~', 'Update'), ('-', 'Delete')])),
                 ('data', django.contrib.postgres.fields.hstore.HStoreField()),
                 ('additional_data', django.contrib.postgres.fields.hstore.HStoreField(null=True)),
                 ('content_type', models.ForeignKey(to='contenttypes.ContentType')),

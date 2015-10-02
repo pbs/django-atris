@@ -71,8 +71,13 @@ class HistoryLogging(object):
 
     def create_historical_record(self, instance, history_type):
         user = self.get_history_user(instance)
+        full_name = (user.get_full_name() if callable(
+            getattr(user, 'get_full_name', None)) else None)
+        username = (user.get_username() if callable(
+            getattr(user, 'get_username', None)) else None)
+
         history_user = (
-            user.get_full_name() or user.email or user.get_username()
+            full_name or getattr(user, 'email', None) or username
             if user else None
         )
         sentinel = object()
@@ -169,10 +174,14 @@ class HistoricalRecord(models.Model):
         previous_version = self.get_previous_version_snapshot()
 
         diff_string += ', '.join(sorted([
-            '{}'.format(attr.replace('_', ' ').capitalize())
-            for (attr, val) in object_snapshot.data.items()
-            if (attr, val) not in previous_version.data.items()
-        ]))
+                                            '{}'.format(attr.replace('_',
+                                                                     ' ').capitalize())
+                                            for (attr, val) in
+                                            object_snapshot.data.items()
+                                            if (attr,
+                                                val) not in
+                                            previous_version.data.items()
+                                            ]))
 
         if diff_string == 'Updated ':
             diff_string += 'with no change'

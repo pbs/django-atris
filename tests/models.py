@@ -23,7 +23,8 @@ class Choice(models.Model):
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
 
-    history = HistoryLogging(additional_data_param_name='additional_data')
+    history = HistoryLogging(additional_data_param_name='additional_data',
+                             ignore_history_for_users='ignore_history_for_users')  # noqa
 
 
 class Voter(models.Model):

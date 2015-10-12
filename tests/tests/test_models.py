@@ -253,6 +253,28 @@ class TestModelsBasicFunctionality(TestCase):
         poll.save()
         self.assertEquals(1, poll.history.count())
 
+    def test_users_marked_for_ignore_without_ids_in_dict(self):
+        Choice.ignore_history_for_users = {'user_names': ['ignore_user']}
+        choice = Choice(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        choice.history_user = User(username='ignore_user')
+        choice.save()
+        self.assertEquals(0, choice.history.count())
+
+    def test_users_marked_for_ignore_without_user_names_in_dict(self):
+        Choice.ignore_history_for_users = {'user_ids': [1010101]}
+        choice = Choice(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        choice.history_user = User(id=1010101)
+        choice.save()
+        self.assertEquals(0, choice.history.count())
+
 
 class TestHistoryLoggingOrdering(TestCase):
 

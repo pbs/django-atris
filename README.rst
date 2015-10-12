@@ -28,14 +28,23 @@ Additional features:
                        After creating that dict, use it when instantiating the
                        HistoryLogging field.
                             additional_data = {'changed_from':'djadmin'}
-                            history = HistoryLogging('additional_data')
+                            history = HistoryLogging(additional_data='additional_data')
    - Exclude fields -
                       if you wish to not track some fields, all you need to do
                       is add a list to your model which contains the fields you
                       do not wish to track in a string format and use that list
                       when instantiating the HistoryLogging field.
                            exclude_fields = ['last_modified'] # as it would always appear to have been updated
-                           history = HistoryLogging('exclude_fields')
+                           history = HistoryLogging(exclude_fields='exclude_fields')
+   - Ignore changes by user -
+                      if you wish to not track changes made by a specific user,
+                      such as a user specially set up for smoke tests, you can declare
+                      an additional field called however you like and pass it on
+                      to the HistoryLogging object. This field must be a dictionary
+                      that contains the keys 'user_ids' and 'user_names', both values
+                      for these keys must be lists containing the appropriate information.
+                           ignore_history_for_users = {'user_ids': [1010101], 'user_names': ['ignore_user']}
+                           history = HistoryLogging(ignore_history_for_users='ignore_history_for_users')
 
 Usage guide
 -----------
@@ -60,7 +69,9 @@ Example of usage in code:
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
     ...   excluded_fields = ['last_modified']
-    ...   history = HistoryLogging(excluded_fields='excluded_fields')
+    ...   ignore_history_for_users = {'user_ids': [1010101], 'user_names': ['ignore_user']}
+    ...   history = HistoryLogging(excluded_fields='excluded_fields',
+    ...                               ignore_history_for_users='ignore_history_for_users)
 
     >>> class Bar(models.Model):
     ...   field_1 = models.CharField(max_length=255)
@@ -83,7 +94,6 @@ Example of usage in code:
 
     >>> Foo.history.all()
     [<HistoricalRecord: Create foo id=1>, <HistoricalRecord: Create foo id=2>]
-
 * Get the global history information (ordered by history_date desc)::
 
     >>> from atris.models import HistoricalRecord
@@ -126,3 +136,9 @@ Example of usage in code:
     >>> bar.save()
     >>> bar.history.first().history_user
     u'username'
+* You can also mark a user such that the history for that user does not get saved. You can do so either by user name(KEEP IN MIND: user name is considered the full name or email or user name of the user instance associated with the history, depending on which is available first, in that order) or ID. You can use this to tell atris to ignore changes made by certain users such as a smoke test user::
+
+    >>> foo.history_user = User(username='ignore_user') # where User is the django User model
+    >>> bar.save()
+    >>> bar.history.filter(history_user='ignore_user').count()
+    0

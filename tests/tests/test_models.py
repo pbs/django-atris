@@ -235,6 +235,25 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals('No prior information available.',
                           choice.history.first().get_diff_to_prev_string())
 
+    def test_users_marked_for_ignore_skip_history(self):
+
+        # Should get ignored
+        poll = Poll(question='question', pub_date=now())
+        poll.history_user = User(username='ignore_user')
+        poll.save()
+        self.assertEquals(0, poll.history.count())
+
+        # Shouldn't get ignored
+        poll.history_user = User(username='not_ignored')
+        poll.save()
+        self.assertEquals(1, poll.history.count())
+
+        # Should get ignored
+        poll.history_user = User(id=1010101)
+        poll.save()
+        self.assertEquals(1, poll.history.count())
+
+
 class TestHistoryLoggingOrdering(TestCase):
 
     def test_global_history_is_ordered_by_history_date(self):

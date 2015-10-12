@@ -25,7 +25,8 @@ class HistoryLogging(object):
     thread = threading.local()
 
     def __init__(self, additional_data_param_name='',
-                 excluded_fields_param_name=''):
+                 excluded_fields_param_name='',
+                 ignore_history_for_users=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -34,10 +35,16 @@ class HistoryLogging(object):
         :param excluded_fields_param_name: String used to determine which field
             on the object contains a list holding the names of the fields which
             should not be tracked in the history.
+        :param ignore_history_for_users: String used to determine which field
+            on the object contains a dictionary holding the names of the users
+            for which history should not be tracked.
+            Dict should contain
+
         :type excluded_fields_param_name: str
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
+        self.ignore_history_for_users = ignore_history_for_users
 
     def get_history_user(self, instance):
         """Get the modifying user from the middleware."""
@@ -75,9 +82,12 @@ class HistoryLogging(object):
 
     def create_historical_record(self, instance, history_type):
         history_user, history_user_id = self._get_user_info(instance)
+        if self.skip_history_by_user(instance, history_user, history_user_id):
+            logger.info("Skipping history instance for user '{}' with user id"
+                        " '{}'".format(history_user, history_user_id))
+            return
 
         data = self._get_fields_from_instance(instance)
-
         additional_data = dict(
             (key, str(value)) for (key, value)
             in getattr(instance, self.additional_data_param_name, {}).items()
@@ -91,6 +101,17 @@ class HistoryLogging(object):
             data=data,
             additional_data=additional_data
         )
+
+    def skip_history_by_user(self, instance, user, user_id):
+        skip_dict = getattr(instance, self.ignore_history_for_users, {})
+        ids_with_skip = skip_dict.get('user_ids')
+        user_names_to_skip = skip_dict.get('user_names')
+        if skip_dict and (
+                    (user_names_to_skip and (user in user_names_to_skip)) or
+                    (ids_with_skip and (user_id in ids_with_skip))
+        ):
+            return True
+        return False
 
     def _get_fields_from_instance(self, instance):
         sentinel = object()

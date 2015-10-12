@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import print_function
-from django.utils import six
-
-str = unicode if six.PY2 else str
-
+from datetime import timedelta
+import logging
 import threading
 
+from django.utils import six
+from django.utils.timezone import now
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField
 from django.db import models
 from django.db.models.query import QuerySet
 
+str = unicode if six.PY2 else str
+
 registered_models = {}
+
+logger = logging.getLogger(__name__)
 
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
@@ -70,29 +74,9 @@ class HistoryLogging(object):
         self.create_historical_record(instance, '-')
 
     def create_historical_record(self, instance, history_type):
-        user = self.get_history_user(instance)
-        full_name = (user.get_full_name() if callable(
-            getattr(user, 'get_full_name', None)) else None)
-        username = (user.get_username() if callable(
-            getattr(user, 'get_username', None)) else None)
+        history_user, history_user_id = self._get_user_info(instance)
 
-        history_user = (
-            full_name or getattr(user, 'email', None) or username
-            if user else None
-        )
-        sentinel = object()
-        history_user_id = user.id if user else None
-        data = {}
-        excluded_fields = getattr(instance, self.excluded_fields_param_name, [])
-        for field in instance._meta.fields:
-            if field.attname not in excluded_fields:
-                key = field.attname
-                value = getattr(instance, field.attname, sentinel)
-                if value is not None and value is not sentinel:
-                    value = str(value)
-                elif value is sentinel:
-                    self.stdout.write(('Field "{}" is invalid.'.format(key)))
-                data[key] = value
+        data = self._get_fields_from_instance(instance)
 
         additional_data = dict(
             (key, str(value)) for (key, value)
@@ -108,6 +92,34 @@ class HistoryLogging(object):
             additional_data=additional_data
         )
 
+    def _get_fields_from_instance(self, instance):
+        sentinel = object()
+        data = {}
+        excluded_fields = getattr(instance, self.excluded_fields_param_name, [])
+        for field in instance._meta.fields:
+            if field.attname not in excluded_fields:
+                key = field.attname
+                value = getattr(instance, field.attname, sentinel)
+                if value is not None and value is not sentinel:
+                    value = str(value)
+                elif value is sentinel:
+                    logger.error(('Field "{}" is invalid.'.format(key)))
+                data[key] = value
+        return data
+
+    def _get_user_info(self, instance):
+        user = self.get_history_user(instance)
+        full_name = (user.get_full_name() if callable(
+            getattr(user, 'get_full_name', None)) else None)
+        username = (user.get_username() if callable(
+            getattr(user, 'get_username', None)) else None)
+        history_user = (
+            full_name or getattr(user, 'email', None) or username
+            if user else None
+        )
+        history_user_id = user.id if user else None
+        return history_user, history_user_id
+
 
 class HistoryManager(object):
     def __get__(self, instance, model):
@@ -120,17 +132,78 @@ class HistoryManager(object):
 
 class HistoricalRecordQuerySet(QuerySet):
     def by_model_and_model_id(self, model, model_id):
+        """
+        Gets historical records by model and model id, so, basically the
+        historical records for an instance of a model.
+        :param model: Model which has the HistoricalRecord field.
+        :param model_id: The model id for which you wish to get the history.
+        :return: The instance's history.
+        :rtype HistoricalRecord
+        """
         return self.by_model(model).filter(object_id=model_id)
 
     def by_model(self, model):
         # noinspection PyProtectedMember
+        """
+        Gets historical records by model.
+        :param model: Model which has the HistoricalRecord field.
+        :return: The entire model's history.
+        :rtype HistoricalRecord
+        """
         return self.filter(
             content_type__model=model._meta.model_name,
             content_type__app_label=model._meta.app_label
         )
 
     def most_recent(self):
+        """
+        Gets the most recent historical record added to the database.
+        :return: The most recent historical record added to the database.
+        :rtype HistoricalRecord
+        """
         return self.first()
+
+    def older_than(self, days=None, weeks=None):
+        """
+        Gets all historical record entries that are older than either the
+        number of days or the number of weeks passed.
+        The weeks parameter will be preferred if both are supplied.
+        :param days: Number of days old a historical record can be, at most.
+        :param weeks: Number of weeks old a historical record can be, at most.
+        :return: All the historical record entries that are older than the
+                 given param.
+        :rtype list(HistoricalRecord)
+        """
+        if not (days or weeks):
+            logger.error('You must supply either the days or the weeks param')
+            return
+        elif days and weeks:
+            logger.info('You supplied both days and weeks, weeks param'
+                        ' will be used as the delimiter.')
+        td = timedelta(weeks=weeks) if weeks else timedelta(days=days)
+        return self.filter(history_date__lte=now() - td)
+
+    def previous_version_by_model_and_id(self, model, object_id, history_id):
+        """
+        Returns the second to last snapshot of the history for model and
+        instance id that is given.
+        :param history_id: Id for history snapshot.
+        :param model: The model for which the snapshot is for.
+        :param object_id: The model ID for which the snapshot is for.
+        :return: The previous to HistoricalRecord
+
+        """
+        main_qs = self.filter(
+            content_type__model=model.model,
+            content_type__app_label=model.app_label,
+            object_id=object_id,
+            id__lt=history_id
+        )
+        if main_qs.count() <= 0:
+            return None
+        result = main_qs.order_by('-history_date').first()
+
+        return result
 
 
 class HistoricalRecord(models.Model):
@@ -162,8 +235,14 @@ class HistoricalRecord(models.Model):
         ordering = ['-history_date']
 
     def get_diff_to_prev_string(self):
-        object_snapshot = self.get_current_snapshot()
-        diff_string = '{}d '.format(object_snapshot.get_history_type_display())
+        """
+        Generates a string which describes the changes that occurred between
+        this historical record instance (self) and its previous version.
+
+        :return: Said string.
+        :rtype String
+        """
+        diff_string = '{}d '.format(self.get_history_type_display())
 
         if 'Update' not in diff_string:
             return '{action}{object}'.format(
@@ -171,11 +250,13 @@ class HistoricalRecord(models.Model):
                 object=self.content_type.model.capitalize()
             )
 
-        previous_version = self.get_previous_version_snapshot()
+        previous_version = self._get_prev_version()
+        if not previous_version:
+            return 'No prior information available.'
 
         diff_string += ', '.join(
             sorted(['{}'.format(attr.replace('_', ' ').capitalize())
-                    for (attr, val) in object_snapshot.data.items()
+                    for (attr, val) in self.data.items()
                     if (attr, val) not in previous_version.data.items()
                     ])
         )
@@ -185,18 +266,9 @@ class HistoricalRecord(models.Model):
 
         return diff_string
 
-    def get_current_snapshot(self):
-        return self
-
-    def get_previous_version_snapshot(self):
-        return HistoricalRecord.objects.filter(
+    def _get_prev_version(self):
+        return HistoricalRecord.objects.previous_version_by_model_and_id(
+            model=self.content_type,
             object_id=self.object_id,
-            content_type=self.content_type,
-            id__lt=self.id
-        ).order_by('-history_date').first()
-
-    def previous_versions(self):
-        return HistoricalRecord.objects.filter(
-            object_id=self.object_id,
-            content_type=self.content_type
+            history_id=self.id
         )

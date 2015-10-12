@@ -201,6 +201,39 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
 
+    def test_diff_string_for_no_previous_history_and_not_created(self):
+        created_snapshot = self.choice.history.first()
+        self.assertEquals('Created Choice',
+                          created_snapshot.get_diff_to_prev_string())
+
+    def test_diff_string_works_properly_with_lost_history(self):
+        """
+        Since old history deletion is a thing, the situation arises that
+        history that once had a previous state no longer does and the snapshot
+        isn't a "creation" snapshot. In this case, the diff string can't know
+        what the difference to the previous state is, so it would return
+        'No prior information available.'.
+
+        """
+        choice = Choice.objects.create(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        self.assertEquals('Created Choice',
+                          choice.history.first().get_diff_to_prev_string())
+
+        # If all the info regarding user is available, the full name
+        # should be used as the history_user string as a priority.
+        choice.choice = 'choice_1'
+        choice.save()
+        self.assertEquals('Updated Choice',
+                          choice.history.first().get_diff_to_prev_string())
+
+        choice.history.last().delete()
+
+        self.assertEquals('No prior information available.',
+                          choice.history.first().get_diff_to_prev_string())
 
 class TestHistoryLoggingOrdering(TestCase):
 

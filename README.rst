@@ -1,9 +1,7 @@
-
-
 django-atris
 ============
 
-django-atris stores a snapshot of each tracked model on create/
+Django-atris stores a snapshot of each tracked model on create/
 update/delete operations.
 
 Snapshots are available in a global form as well.
@@ -11,13 +9,14 @@ Snapshots are available in a global form as well.
 This app requires:
    - Django>=1.7
    - Postgresql
-   - Python>=2.7
+   - Python>=2.7 or Python>=3.4
 
 Integration guide
 -----------------
 
 In order to use the app you must do the following:
- * Add atris to INSTALLED_APPS in settings
+ * Add 'atris' to INSTALLED_APPS in settings
+ * You MUST have 'django.contrib.postgres' in your INSTALLED_APPS
  * Add 'atris.middleware.LoggingRequestMiddleware' to MIDDLEWARE_CLASSES in order for the app to be able to get the user which made the changes
  * Put a field (named as you wish) in the model class that you desire to track that contains a HistoryLogging instance (i.e. history = HistoryLogging() )
 
@@ -29,14 +28,14 @@ Additional features:
                        After creating that dict, use it when instantiating the
                        HistoryLogging field.
                             additional_data = {'changed_from':'djadmin'}
-                            history = HistoryLogging(additional_data)
+                            history = HistoryLogging('additional_data')
    - Exclude fields -
                       if you wish to not track some fields, all you need to do
                       is add a list to your model which contains the fields you
                       do not wish to track in a string format and use that list
                       when instantiating the HistoryLogging field.
                            exclude_fields = ['last_modified'] # as it would always appear to have been updated
-                           history = HistoryLogging(exclude_fields)
+                           history = HistoryLogging('exclude_fields')
 
 Usage guide
 -----------
@@ -47,7 +46,7 @@ For starters, the fields made available to you when inspecting a history instanc
     * content_type = django contenttype
     * object_id = the model instance id that the history is kept of
     * history_date = the date that the history instance was created
-    * history_user = the user that triggered the history instance (taken from middleware)
+    * history_user = the user that triggered the history instance (taken from middleware); For this string, the value it takes is prioritised in this order: fullname > email > username, if none are available it remains None.
     * history_user_id = the id of the user that triggered the history instance (taken from middleware)
     * history_type = type of history, +: Create, ~: Update, -:Delete (the method 'get_history_type_display()' gets you the string interpretation)
     * data = hstore field, contains a snapshot (in the form of a dict) of the model instance that the history is being kept of, doesn't contain excluded fields nor additional data fields
@@ -123,7 +122,7 @@ Example of usage in code:
     {u'modified_from':u'code'}
 * If you have a situation where the user cannot be determined from the django middleware you can also do the following::
 
-    >>> bar.history_user = User(username='username')
+    >>> bar.history_user = User(username='username') # where User is the django User model
     >>> bar.save()
     >>> bar.history.first().history_user
     u'username'

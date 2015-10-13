@@ -142,7 +142,7 @@ Example of usage in code:
 
 * You can also mark a user such that the history for that user does not get saved. You can do so either by user name(KEEP IN MIND: user name is considered the full name or email or user name of the user instance associated with the history, depending on which is available first, in that order) or ID. You can use this to tell atris to ignore changes made by certain users such as a smoke test user::
 
-    >>> foo.history_user = User(username='ignore_user') # where User is the django User model
+    >>> bar.history_user = User(username='ignore_user') # where User is the django User model
     >>> bar.save()
     >>> bar.history.filter(history_user='ignore_user').count()
     0

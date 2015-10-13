@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 
 from django.utils.timezone import now
 
-from src.atris.models import HistoricalRecord
+from atris.models import HistoricalRecord
 from tests.models import Poll, Choice, Voter
 
 
@@ -236,7 +236,6 @@ class TestModelsBasicFunctionality(TestCase):
                           choice.history.first().get_diff_to_prev_string())
 
     def test_users_marked_for_ignore_skip_history(self):
-
         # Should get ignored
         poll = Poll(question='question', pub_date=now())
         poll.history_user = User(username='ignore_user')
@@ -277,7 +276,6 @@ class TestModelsBasicFunctionality(TestCase):
 
 
 class TestHistoryLoggingOrdering(TestCase):
-
     def test_global_history_is_ordered_by_history_date(self):
         # clear the history state prior to test starting
         HistoricalRecord.objects.all().delete()

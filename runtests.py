@@ -19,7 +19,7 @@ installed_apps = [
     'django.contrib.sessions',
     'django.contrib.admin',
     'django.contrib.postgres',
-    'src.atris',
+    'atris',
     'tests',
 ]
 
@@ -40,7 +40,7 @@ DEFAULT_SETTINGS = dict(
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
-        'src.atris.middleware.LoggingRequestMiddleware',
+        'atris.middleware.LoggingRequestMiddleware',
     ],
 )
 
@@ -56,8 +56,7 @@ def main():
         from django.test.simple import DjangoTestSuiteRunner
         failures = DjangoTestSuiteRunner(failfast=False).run_tests(['tests'])
     else:
-        failures = DiscoverRunner(failfast=False).run_tests(
-            ['tests'])
+        failures = DiscoverRunner(failfast=False).run_tests(['tests'])
     sys.exit(failures)
 
 

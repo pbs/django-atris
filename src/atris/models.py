@@ -9,7 +9,7 @@ from django.utils import six
 from django.utils.timezone import now
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import HStoreField
+from django.contrib.postgres.fields import HStoreField, ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
 
@@ -88,6 +88,8 @@ class HistoryLogging(object):
             return
 
         data = self._get_fields_from_instance(instance)
+        diff_fields = self._get_diff_fields(data, instance)
+
         additional_data = dict(
             (key, str(value)) for (key, value)
             in getattr(instance, self.additional_data_param_name, {}).items()
@@ -99,8 +101,21 @@ class HistoryLogging(object):
             history_user=history_user,
             history_user_id=history_user_id,
             data=data,
+            history_diff=diff_fields,
             additional_data=additional_data
         )
+
+    def _get_diff_fields(self, data, instance):
+        if instance.history.exists():
+            previous_snapshot = instance.history.first()
+            return (
+                [(attr.replace('_', ' ').capitalize())
+                 for (attr, val) in data.items()
+                 if (attr, val) not in previous_snapshot.data.items()] or
+                ['with no change']
+            )
+        else:
+            return []
 
     def skip_history_by_user(self, instance, user, user_id):
         skip_dict = getattr(instance, self.ignore_history_for_users, {})
@@ -241,6 +256,9 @@ class HistoricalRecord(models.Model):
         ('-', 'Delete'),
     ))
 
+    history_diff = ArrayField(models.CharField(max_length=200),
+                              blank=True, null=True)
+
     data = HStoreField()
     additional_data = HStoreField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
@@ -271,19 +289,23 @@ class HistoricalRecord(models.Model):
                 object=self.content_type.model.capitalize()
             )
 
-        previous_version = self._get_prev_version()
-        if not previous_version:
+        if self.history_diff is None:
+            previous_version = self._get_prev_version()
+            if previous_version:
+                self.history_diff = (
+                    ['{}'.format(attr.replace('_', ' ').capitalize()) for
+                     (attr, val) in self.data.items()
+                     if (attr, val) not in previous_version.data.items()] or
+                    ['with no change']
+                )
+            else:
+                self.history_diff = []
+            self.save()
+
+        if not self.history_diff:
             return 'No prior information available.'
 
-        diff_string += ', '.join(
-            sorted(['{}'.format(attr.replace('_', ' ').capitalize())
-                    for (attr, val) in self.data.items()
-                    if (attr, val) not in previous_version.data.items()
-                    ])
-        )
-
-        if diff_string == 'Updated ':
-            diff_string += 'with no change'
+        diff_string += ', '.join(sorted(self.history_diff))
 
         return diff_string
 

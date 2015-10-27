@@ -57,11 +57,15 @@ class TestModelsBasicFunctionality(TestCase):
             'Updated Question',
             self.poll.history.first().get_diff_to_prev_string()
         )
+        self.assertEquals(['Question'],
+                          self.poll.history.most_recent().history_diff)
         self.assertEquals('~', self.poll.history.first().history_type)
 
         self.assertEquals(2, self.choice.history.count())
         self.assertEquals(self.choice.choice,
                           self.choice.history.first().data['choice'])
+        self.assertEquals(['Choice'],
+                          self.choice.history.most_recent().history_diff)
         self.assertEquals(
             'Updated Choice',
             self.choice.history.first().get_diff_to_prev_string()
@@ -81,6 +85,8 @@ class TestModelsBasicFunctionality(TestCase):
             'Updated Choice, Poll id',
             self.choice.history.first().get_diff_to_prev_string()
         )
+        self.assertEquals(['Poll id', 'Choice'],
+                          self.choice.history.most_recent().history_diff)
         self.assertEquals('~', self.poll.history.first().history_type)
 
     def test_history_delete_for_tracked_models(self):
@@ -223,17 +229,74 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals('Created Choice',
                           choice.history.first().get_diff_to_prev_string())
 
-        # If all the info regarding user is available, the full name
-        # should be used as the history_user string as a priority.
+        # Delete the history
+        choice.history.delete()
+
+        # Update with no prior history information available
         choice.choice = 'choice_1'
         choice.save()
-        self.assertEquals('Updated Choice',
+
+        self.assertEquals(
+            'No prior information available.',
+            choice.history.first().get_diff_to_prev_string(),
+            'Should not have the info required to build the history diff.'
+        )
+
+        # Check for entries that have no pre-populated history
+        hist = choice.history.most_recent()
+        hist.history_diff = None
+        hist.save()
+
+        self.assertEquals(
+            'No prior information available.',
+            choice.history.first().get_diff_to_prev_string(),
+            "Shouldn't be able to generate diff."
+        )
+
+    def test_updated_with_no_change(self):
+        choice = Choice.objects.create(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        self.assertEquals('Created Choice',
+                          choice.history.first().get_diff_to_prev_string())
+        choice.save()
+        self.assertEquals('Updated with no change',
                           choice.history.first().get_diff_to_prev_string())
 
-        choice.history.last().delete()
-
-        self.assertEquals('No prior information available.',
+    def test_history_diff_is_generated_if_none(self):
+        choice = Choice.objects.create(
+            poll=self.poll,
+            choice='choice_3',
+            votes=0
+        )
+        self.assertEquals('Created Choice',
                           choice.history.first().get_diff_to_prev_string())
+
+        choice.choice = 'choice_1'
+        choice.save()
+        # Simulate not having history_diff generated already (None)
+        choice_hist = choice.history.most_recent()
+        choice_hist.history_diff = None
+        choice_hist.save()
+
+        # Make sure it's None before rebuild
+        self.assertIsNone(
+            choice.history.most_recent().history_diff
+        )
+
+        # Should rebuild history_diff because it has prior history entries
+        self.assertEquals(
+            'Updated Choice',
+            choice.history.first().get_diff_to_prev_string(),
+        )
+
+        # History diff should now be populated
+        self.assertEquals(
+            ['Choice'],
+            choice.history.most_recent().history_diff
+        )
 
     def test_users_marked_for_ignore_skip_history(self):
         # Should get ignored

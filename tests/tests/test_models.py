@@ -54,20 +54,20 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals(self.poll.question,
                           self.poll.history.first().data['question'])
         self.assertEquals(
-            'Updated Question',
+            'Updated question',
             self.poll.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(['Question'],
+        self.assertEquals(['question'],
                           self.poll.history.most_recent().history_diff)
         self.assertEquals('~', self.poll.history.first().history_type)
 
         self.assertEquals(2, self.choice.history.count())
         self.assertEquals(self.choice.choice,
                           self.choice.history.first().data['choice'])
-        self.assertEquals(['Choice'],
+        self.assertEquals(['choice'],
                           self.choice.history.most_recent().history_diff)
         self.assertEquals(
-            'Updated Choice',
+            'Updated choice',
             self.choice.history.first().get_diff_to_prev_string()
         )
         self.assertEquals('~', self.choice.history.first().history_type)
@@ -82,10 +82,10 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals(str(self.choice.poll_id),
                           self.choice.history.first().data['poll_id'])
         self.assertEquals(
-            'Updated Choice, Poll',
+            'Updated choice, poll',
             self.choice.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(set(['Poll', 'Choice']),
+        self.assertEquals(set(['poll', 'choice']),
                           set(self.choice.history.most_recent().history_diff))
         self.assertEquals('~', self.poll.history.first().history_type)
 
@@ -288,13 +288,13 @@ class TestModelsBasicFunctionality(TestCase):
 
         # Should rebuild history_diff because it has prior history entries
         self.assertEquals(
-            'Updated Choice',
+            'Updated choice',
             choice.history.first().get_diff_to_prev_string(),
         )
 
         # History diff should now be populated
         self.assertEquals(
-            ['Choice'],
+            ['choice'],
             choice.history.most_recent().history_diff
         )
 

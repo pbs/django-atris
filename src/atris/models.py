@@ -109,7 +109,7 @@ class HistoryLogging(object):
         if instance.history.exists():
             previous_snapshot = instance.history.first()
             return (
-                [(attr.replace('_', ' ').capitalize())
+                [instance._meta.get_field(attr).verbose_name.capitalize()
                  for (attr, val) in data.items()
                  if (attr, val) not in previous_snapshot.data.items()] or
                 ['with no change']
@@ -293,7 +293,8 @@ class HistoricalRecord(models.Model):
             previous_version = self._get_prev_version()
             if previous_version:
                 self.history_diff = (
-                    ['{}'.format(attr.replace('_', ' ').capitalize()) for
+                    [(self.content_object._meta.get_field(
+                        attr).verbose_name.capitalize()) for
                      (attr, val) in self.data.items()
                      if (attr, val) not in previous_version.data.items()] or
                     ['with no change']

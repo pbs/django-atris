@@ -82,11 +82,11 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals(str(self.choice.poll_id),
                           self.choice.history.first().data['poll_id'])
         self.assertEquals(
-            'Updated Choice, Poll id',
+            'Updated Choice, Poll',
             self.choice.history.first().get_diff_to_prev_string()
         )
-        self.assertEquals(['Poll id', 'Choice'],
-                          self.choice.history.most_recent().history_diff)
+        self.assertEquals(set(['Poll', 'Choice']),
+                          set(self.choice.history.most_recent().history_diff))
         self.assertEquals('~', self.poll.history.first().history_type)
 
     def test_history_delete_for_tracked_models(self):

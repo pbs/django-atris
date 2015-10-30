@@ -293,7 +293,8 @@ class HistoricalRecord(models.Model):
             previous_version = self._get_prev_version()
             if previous_version:
                 self.history_diff = (
-                    [self.content_object._meta.get_field(attr).verbose_name for
+                    [self.content_type.model_class()._meta.get_field(
+                        attr).verbose_name for
                      (attr, val) in self.data.items()
                      if (attr, val) not in previous_version.data.items()] or
                     ['with no change']

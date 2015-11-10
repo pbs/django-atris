@@ -88,7 +88,10 @@ class HistoryLogging(object):
             return
 
         data = self._get_fields_from_instance(instance)
-        diff_fields = self._get_diff_fields(data, instance)
+        if history_type == '~':
+            diff_fields = self._get_diff_fields(data, instance)
+        else:
+            diff_fields = list()
 
         additional_data = dict(
             (key, str(value)) for (key, value)
@@ -115,7 +118,7 @@ class HistoryLogging(object):
                 ['with no change']
             )
         else:
-            return []
+            return list()
 
     def skip_history_by_user(self, instance, user, user_id):
         skip_dict = getattr(instance, self.ignore_history_for_users, {})

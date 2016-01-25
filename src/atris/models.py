@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 from __future__ import print_function
-from datetime import timedelta
+from __future__ import unicode_literals
+
 import logging
 import threading
+from datetime import timedelta
 
-from django.utils import six
-from django.utils.timezone import now
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField, ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
+from django.utils import six
+from django.utils.timezone import now
 
 str = unicode if six.PY2 else str
 
@@ -125,8 +126,8 @@ class HistoryLogging(object):
         ids_with_skip = skip_dict.get('user_ids')
         user_names_to_skip = skip_dict.get('user_names')
         if skip_dict and (
-                    (user_names_to_skip and (user in user_names_to_skip)) or
-                    (ids_with_skip and (user_id in ids_with_skip))
+                (user_names_to_skip and (user in user_names_to_skip)) or
+                (ids_with_skip and (user_id in ids_with_skip))
         ):
             return True
         return False
@@ -247,10 +248,10 @@ class HistoricalRecordQuerySet(QuerySet):
 
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
-    object_id = models.PositiveIntegerField()
+    object_id = models.PositiveIntegerField(db_index=True)
     content_object = GenericForeignKey('content_type', 'object_id')
 
-    history_date = models.DateTimeField(auto_now_add=True)
+    history_date = models.DateTimeField(auto_now_add=True, db_index=True)
     history_user = models.CharField(max_length=50, null=True)
     history_user_id = models.PositiveIntegerField(null=True)
     history_type = models.CharField(max_length=1, choices=(

@@ -9,7 +9,7 @@ from datetime import timedelta
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import HStoreField, ArrayField
-from django.db import models
+from django.db import models, connection
 from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.timezone import now
@@ -245,6 +245,21 @@ class HistoricalRecordQuerySet(QuerySet):
 
         return result
 
+    def approx_count(self):
+        """
+            Takes a queryset and generates a fast approximate count(*) for it.
+            This is required because postgresql count(*) has to go through all
+            of the entries in the database, making it extremely slow for
+            large tables.
+            :return: int representing approx count(*)
+            """
+        table_name = self.model._meta.db_table
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT reltuples FROM pg_class WHERE relname='{}';".format(
+                table_name))
+        row = cursor.fetchone()
+        return int(row[0])
 
 class HistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)

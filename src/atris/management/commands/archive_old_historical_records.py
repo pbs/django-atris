@@ -63,9 +63,9 @@ class Command(BaseCommand):
         )
         query = ("INSERT INTO atris_archivedhistoricalrecord ({}) "
                  "SELECT {} FROM atris_historicalrecord "
-                 "WHERE history_date > '{}';".format(fields_str, fields_str,
-                 older_than_date.date()))
+                 "WHERE history_date < '{}';".format(fields_str, fields_str,
+                                                     older_than_date.date()))
         cursor.execute(query)
         query = ("DELETE FROM atris_historicalrecord "
-                 "WHERE history_date > '{}';".format(older_than_date.date()))
+                 "WHERE history_date < '{}';".format(older_than_date.date()))
         cursor.execute(query)

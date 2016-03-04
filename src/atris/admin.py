@@ -1,7 +1,48 @@
-from atris.models import HistoricalRecord
-from atris.models.archived_historical_record import ArchivedHistoricalRecord
 from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
 from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext_lazy as _
+
+from atris.models import HistoricalRecord
+from atris.models import history_logging
+from atris.models.archived_historical_record import ArchivedHistoricalRecord
+
+
+class ContentTypeListFilter(admin.SimpleListFilter):
+    # Human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options.
+    title = _('Content type')
+
+    # Parameter for the filter that will be used in the URL query.
+    parameter_name = 'content_type'
+
+    def lookups(self, request, model_admin):
+        """
+        Returns a list of tuples. The first element in each
+        tuple is the coded value for the option that will
+        appear in the URL query. The second element is the
+        human-readable name for the option that will appear
+        in the right sidebar.
+        """
+        followed_content_types = [
+            ContentType.objects.get_for_model(model)
+            for model in history_logging.registered_models.keys()
+            ]
+
+        filter_results = set()
+        for content_type in followed_content_types:
+            filter_results.add((content_type.id, _(content_type.model)))
+
+        return filter_results
+
+    def queryset(self, request, queryset):
+        """
+        Returns the filtered queryset based on the value
+        provided in the query string and retrievable via
+        `self.value()`.
+        """
+        if self.value() is not None:
+            return queryset.filter(content_type__id=self.value())
 
 
 class GenericHistoryAdmin(admin.ModelAdmin):
@@ -17,8 +58,7 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
     search_fields = ('object_id',)
 
-    list_filter = (('content_type', admin.RelatedOnlyFieldListFilter),
-                   'history_type')
+    list_filter = (ContentTypeListFilter, 'history_type')
 
     def history_snapshot(self, obj):
         return self._dict_to_table(obj.data)

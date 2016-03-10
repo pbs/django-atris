@@ -1,11 +1,11 @@
-from django.contrib import admin
-from django.contrib.contenttypes.models import ContentType
-from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext_lazy as _
-
 from atris.models import HistoricalRecord
 from atris.models import history_logging
 from atris.models.archived_historical_record import ArchivedHistoricalRecord
+from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
+from django.db import models, connections
+from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext_lazy as _
 
 
 class ContentTypeListFilter(admin.SimpleListFilter):
@@ -45,6 +45,37 @@ class ContentTypeListFilter(admin.SimpleListFilter):
             return queryset.filter(content_type__id=self.value())
 
 
+class ApproxCountPgQuerySet(models.query.QuerySet):
+    """approximate unconstrained count(*) with reltuples from pg_class"""
+
+    def count(self):
+        if self._result_cache is not None and not self._iter:
+            return len(self._result_cache)
+
+        if hasattr(connections[self.db].client.connection, 'pg_version'):
+            query = self.query
+            if (not query.where and query.high_mark is
+                None and query.low_mark == 0 and not query.select
+                and not query.group_by and not query.having
+                and not query.distinct):
+                parts = [p.strip('"') for p in
+                         self.model._meta.db_table.split('.')]
+                cursor = connections[self.db].cursor()
+                if len(parts) == 1:
+                    cursor.execute(
+                        "select reltuples::bigint FROM pg_class WHERE relname "
+                        "= %s", parts
+                    )
+                else:
+                    cursor.execute(
+                        "select reltuples::bigint FROM pg_class c JOIN "
+                        "pg_namespace n on (c.relnamespace = n.oid) WHERE "
+                        "n.nspname = %s AND c.relname = %s", parts
+                    )
+            return cursor.fetchall()[0][0]
+        return self.query.get_count(using=self.db)
+
+
 class GenericHistoryAdmin(admin.ModelAdmin):
     list_display = (
         'object_id', 'content_type', 'history_date', 'history_type',
@@ -59,6 +90,12 @@ class GenericHistoryAdmin(admin.ModelAdmin):
     search_fields = ('object_id',)
 
     list_filter = (ContentTypeListFilter, 'history_type')
+
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        qs = super(GenericHistoryAdmin, self).get_queryset(request)
+        return qs._clone(klass=ApproxCountPgQuerySet)
 
     def history_snapshot(self, obj):
         return self._dict_to_table(obj.data)
@@ -94,10 +131,12 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
 class HistoricalRecordAdmin(GenericHistoryAdmin):
     model = HistoricalRecord
+    show_full_result_count = False
 
 
 class ArchivedHistoricalRecordAdmin(GenericHistoryAdmin):
     model = ArchivedHistoricalRecord
+    show_full_result_count = False
 
 
 admin.site.register(HistoricalRecord, HistoricalRecordAdmin)

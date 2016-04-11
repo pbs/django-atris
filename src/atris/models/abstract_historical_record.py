@@ -120,11 +120,15 @@ class AbstractHistoricalRecord(models.Model):
     history_date = models.DateTimeField(auto_now_add=True, db_index=True)
     history_user = models.CharField(max_length=50, null=True)
     history_user_id = models.PositiveIntegerField(null=True)
-    history_type = models.CharField(max_length=1, choices=(
-        ('+', 'Create'),
-        ('~', 'Update'),
-        ('-', 'Delete'),
-    ))
+    history_type = models.CharField(
+        max_length=1,
+        choices=(
+            ('+', 'Create'),
+            ('~', 'Update'),
+            ('-', 'Delete'),
+        ),
+        db_index=True
+    )
 
     history_diff = ArrayField(models.CharField(max_length=200),
                               blank=True, null=True)

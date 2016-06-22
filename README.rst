@@ -7,7 +7,7 @@ update/delete operations.
 Snapshots are available in a global form as well.
 
 This app requires:
-   - Django>=1.7
+   - Django>=1.9 (For Django <1.9 please use django-atris <1.0.0)
    - Postgresql
    - Python>=2.7 or Python>=3.4
 

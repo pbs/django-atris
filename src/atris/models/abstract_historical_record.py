@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import HStoreField, ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models, connection
 from django.db.models.query import QuerySet
 from django.utils import six
@@ -133,8 +133,8 @@ class AbstractHistoricalRecord(models.Model):
     history_diff = ArrayField(models.CharField(max_length=200),
                               blank=True, null=True)
 
-    data = HStoreField()
-    additional_data = HStoreField(null=True)
+    data = JSONField()
+    additional_data = JSONField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
 
     def __unicode__(self):

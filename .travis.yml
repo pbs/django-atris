@@ -4,6 +4,8 @@ python:
 - "3.4"
 install:
 - pip install tox
+addons:
+  postgresql: "9.4"
 before_script:
 - psql -U postgres -c "CREATE ROLE history_user2 WITH CREATEUSER CREATEDB LOGIN PASSWORD 'pass';"
 - psql -U postgres -c 'CREATE DATABASE test_history_db WITH OWNER history_user2;'

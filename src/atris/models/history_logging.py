@@ -131,7 +131,8 @@ class HistoryLogging(object):
     def _get_fields_from_instance(self, instance):
         sentinel = object()
         data = {}
-        excluded_fields = getattr(instance, self.excluded_fields_param_name, [])
+        excluded_fields = getattr(
+            instance, self.excluded_fields_param_name, [])
         for field in instance._meta.fields:
             if field.attname not in excluded_fields:
                 key = field.attname

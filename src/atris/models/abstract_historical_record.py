@@ -145,6 +145,7 @@ class AbstractHistoricalRecord(models.Model):
         )
 
     class Meta:
+        app_label = 'atris'
         ordering = ['-history_date']
         abstract = True
 

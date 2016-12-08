@@ -68,4 +68,5 @@ class Command(BaseCommand):
                 )
             )
             historical_instances.append(historical_record)
-        models.HistoricalRecord.objects.bulk_create(historical_instances)
+        models.HistoricalRecord.objects.bulk_create(historical_instances,
+                                                    batch_size=1000)

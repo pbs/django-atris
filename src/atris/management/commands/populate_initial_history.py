@@ -9,6 +9,7 @@ from optparse import make_option
 
 from django.utils import six
 from django.core.management import BaseCommand
+from django.db import DatabaseError
 from django.db.transaction import atomic
 
 from atris.models import HistoricalRecord, registered_models
@@ -58,8 +59,12 @@ class Command(BaseCommand):
                 options['select_batch_size'], options['create_batch_size'],
                 self.stdout
             )
-            with atomic():
-                create_history_for_model()
+            try:
+                with atomic():
+                    create_history_for_model()
+            except DatabaseError as e:
+                self.stderr.write('Error creating history for {}: {}'
+                                  .format(model, e))
 
 
 class ModelHistoryCreator(object):

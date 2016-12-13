@@ -53,10 +53,8 @@ def main():
     try:
         from django.test.runner import DiscoverRunner
     except ImportError:
-        from django.test.simple import DjangoTestSuiteRunner
-        failures = DjangoTestSuiteRunner(failfast=False).run_tests(['tests'])
-    else:
-        failures = DiscoverRunner(failfast=False).run_tests(['tests'])
+        from django.test.simple import DjangoTestSuiteRunner as DiscoverRunner
+    failures = DiscoverRunner(failfast=False, verbosity=2).run_tests(['tests'])
     sys.exit(failures)
 
 

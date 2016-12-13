@@ -44,7 +44,7 @@ class Command(BaseCommand):
                     model=model,
                 ))
                 continue
-            self.stdout.write('Initializing hsitory for {}\n'.format(model))
+            self.stdout.write('Initializing history for {}\n'.format(model))
             additional_data_param_name = model_specific_info[
                 'additional_data_param_name']
             additional_data_field = getattr(model, additional_data_param_name,

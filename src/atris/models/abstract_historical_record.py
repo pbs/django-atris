@@ -45,6 +45,20 @@ class HistoricalRecordQuerySet(QuerySet):
             content_type__app_label=model._meta.app_label
         )
 
+    def by_app_label_and_model_name(self, app_label, model_name):
+        """
+        Gets historical record by app label and model name.
+        :param app_label: The name of the application in which the model is
+        defined.
+        :param model_name: The name of the model that has a HistoricalRecord
+        field.
+        :return: The entire history of the model.
+        """
+        return self.filter(
+            content_type__model=model_name,
+            content_type__app_label=app_label
+        )
+
     def most_recent(self):
         """
         Gets the most recent historical record added to the database.
@@ -129,11 +143,17 @@ class AbstractHistoricalRecord(models.Model):
         ),
         db_index=True
     )
-
     history_diff = ArrayField(models.CharField(max_length=200),
                               blank=True, null=True)
 
     data = JSONField()
+    related_field_history = models.OneToOneField(
+        'self',
+        related_name='referenced_object_history',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
     additional_data = JSONField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
 

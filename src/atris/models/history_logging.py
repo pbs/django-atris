@@ -5,16 +5,20 @@ from __future__ import unicode_literals
 import logging
 import threading
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.utils import six
 
-from.historical_record import HistoricalRecord
+from .historical_record import get_history_model
+
 
 str = unicode if six.PY2 else str
 
 registered_models = {}
 
 logger = logging.getLogger(__name__)
+
+HistoricalRecord = get_history_model()
 
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
@@ -23,7 +27,8 @@ class HistoryLogging(object):
 
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
-                 ignore_history_for_users=''):
+                 ignore_history_for_users='',
+                 interested_related_fields=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -41,6 +46,7 @@ class HistoryLogging(object):
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
+        self.interested_related_fields_param_name = interested_related_fields
         self.ignore_history_for_users = ignore_history_for_users
 
     def get_history_user(self, instance):
@@ -62,7 +68,7 @@ class HistoryLogging(object):
                 'additional_data_param_name': self.additional_data_param_name,
                 'excluded_fields_param_name': self.excluded_fields_param_name
             }
-        # The HistoricalRecords object will be discarded,
+        # The HistoricalRecord object will be discarded,
         # so the signal handlers can't use weak references.
         models.signals.post_save.connect(self.post_save, sender=sender,
                                          weak=False)
@@ -84,7 +90,7 @@ class HistoryLogging(object):
                         " '{}'".format(history_user, history_user_id))
             return
 
-        data = self._get_fields_from_instance(instance)
+        data = self._get_field_data_from_instance(instance)
         if history_type == '~':
             diff_fields = self._get_diff_fields(data, instance)
         else:
@@ -95,7 +101,9 @@ class HistoryLogging(object):
             in getattr(instance, self.additional_data_param_name, {}).items()
         )
 
-        HistoricalRecord.objects.create(
+        # TODO: Only create History if there are non-excluded fields that differ
+
+        instance_history = HistoricalRecord.objects.create(
             content_object=instance,
             history_type=history_type,
             history_user=history_user,
@@ -104,6 +112,32 @@ class HistoryLogging(object):
             history_diff=diff_fields,
             additional_data=additional_data
         )
+
+        interested_related_fields = getattr(
+            instance, self.interested_related_fields_param_name, [])
+        for field_name in interested_related_fields:
+            try:
+                field = instance._meta.get_field(field_name)
+            except FieldDoesNotExist:
+                logger.error('Field "{}" is invalid.'.format(field_name))
+            else:
+                interested_object = getattr(instance, field.attname)
+                instance_class_name = instance.__class__.__name__
+                instance_name = instance_class_name.lower()
+                history_message = '{action}d {object_type}'.format(
+                    action=instance_history.get_history_type_display(),
+                    object_type=instance_class_name
+                )
+                HistoricalRecord.objects.create(
+                    content_object=interested_object,
+                    history_type='~',
+                    history_user=history_user,
+                    history_user_id=history_user_id,
+                    data=self._get_field_data_from_instance(interested_object),
+                    history_diff=[instance_name],
+                    additional_data={instance_name: history_message},
+                    related_field_history=instance_history
+                )
 
     def _get_diff_fields(self, data, instance):
         if instance.history.exists():
@@ -128,21 +162,19 @@ class HistoryLogging(object):
             return True
         return False
 
-    def _get_fields_from_instance(self, instance):
-        sentinel = object()
+    def _get_field_data_from_instance(self, instance):
         data = {}
         excluded_fields = getattr(
             instance, self.excluded_fields_param_name, [])
         for field in instance._meta.fields:
-            if field.attname not in excluded_fields:
-                key = field.attname
-                value = getattr(instance, field.attname, sentinel)
-                if value is not None and value is not sentinel:
-                    value = str(value)
-                elif value is sentinel:
-                    logger.error(('Field "{}" is invalid.'.format(key)))
-                data[key] = value
+            key = field.attname
+            if key not in excluded_fields:
+                value = getattr(instance, key)
+                data[key] = str(value) if value is not None else str(value)
         return data
+
+    def _get_tracked_fields_from_model(self, model_or_instance):
+        pass
 
     def _get_user_info(self, instance):
         user = self.get_history_user(instance)

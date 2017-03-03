@@ -5,7 +5,6 @@ from __future__ import print_function
 from __future__ import division  # noqa
 
 from math import ceil
-from optparse import make_option
 
 from django.utils import six
 from django.core.management import BaseCommand
@@ -13,6 +12,7 @@ from django.db import DatabaseError
 from django.db.transaction import atomic
 
 from atris.models import HistoricalRecord, registered_models
+
 
 str = str if six.PY2 else str
 
@@ -23,20 +23,23 @@ class Command(BaseCommand):
     SELECT_BATCH_SIZE = 1000
     CREATE_BATCH_SIZE = 1000
 
-    option_list = BaseCommand.option_list + (
-        make_option('--select-batch-size',
-                    dest='select_batch_size',
-                    type='int',
-                    default=SELECT_BATCH_SIZE,
-                    help='The number of target objects that will be retrieved '
-                         'from the DB at one time.'),
-        make_option('--create-batch-size',
-                    dest='create_batch_size',
-                    type='int',
-                    default=CREATE_BATCH_SIZE,
-                    help='The number of history objects that will be created '
-                         'in one batch. Should be at most SELECT_BATCH_SIZE.')
-    )
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--select-batch-size',
+            dest='select_batch_size',
+            type=int,
+            default=self.SELECT_BATCH_SIZE,
+            help='The number of target objects that will be retrieved from '
+                 'the DB at one time.'
+        )
+        parser.add_argument(
+            '--create-batch-size',
+            dest='create_batch_size',
+            type=int,
+            default=self.CREATE_BATCH_SIZE,
+            help='The number of history objects that will be created '
+                 'in one batch. Should be at most SELECT_BATCH_SIZE.'
+        )
 
     def handle(self, *args, **options):
         for model, model_specific_info in registered_models.items():

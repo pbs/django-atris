@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import print_function
+from unittest import TestCase
 from django.utils import six
 
-str = unicode if six.PY2 else str
-
-from unittest import TestCase
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 
@@ -13,6 +11,9 @@ from django.utils.timezone import now
 
 from atris.models import HistoricalRecord
 from tests.models import Poll, Choice, Voter
+
+
+str = unicode if six.PY2 else str
 
 
 class TestModelsBasicFunctionality(TestCase):
@@ -363,8 +364,10 @@ class TestHistoryLoggingOrdering(TestCase):
             choices[i].choice += '_updated'
             choices[i].save()
 
-        self.assertEquals(len(polls + choices) * 2,  # take updates into account
-                          HistoricalRecord.objects.all().count())
+        self.assertEquals(
+            len(polls + choices) * 2,  # take updates into account
+            HistoricalRecord.objects.all().count()
+        )
 
         oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
         for entry in oldest_twenty_history_entries:

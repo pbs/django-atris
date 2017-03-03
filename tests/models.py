@@ -7,10 +7,9 @@ class Poll(models.Model):
     question = models.CharField(max_length=200)
     pub_date = models.DateTimeField('date published')
     updated_on = models.DateTimeField(auto_now=True)
+
     excluded_fields = ['updated_on']
-
     additional_data = {'where_from': 'Import'}  # default
-
     ignore_history_for_users = {'user_ids': [1010101],
                                 'user_names': ['ignore_user']}
 
@@ -23,8 +22,13 @@ class Choice(models.Model):
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
 
-    history = HistoryLogging(additional_data_param_name='additional_data',
-                             ignore_history_for_users='ignore_history_for_users')  # noqa
+    interested_related_objects = ['poll']
+
+    history = HistoryLogging(
+        additional_data_param_name='additional_data',
+        ignore_history_for_users='ignore_history_for_users',
+        interested_related_objects='interested_related_objects'
+    )
 
 
 class Voter(models.Model):

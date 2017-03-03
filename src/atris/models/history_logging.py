@@ -28,7 +28,7 @@ class HistoryLogging(object):
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
                  ignore_history_for_users='',
-                 interested_related_fields=''):
+                 interested_related_objects=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -46,7 +46,7 @@ class HistoryLogging(object):
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
-        self.interested_related_fields_param_name = interested_related_fields
+        self.interested_related_objects_param_name = interested_related_objects
         self.ignore_history_for_users = ignore_history_for_users
 
     def get_history_user(self, instance):
@@ -113,15 +113,15 @@ class HistoryLogging(object):
             additional_data=additional_data
         )
 
-        interested_related_fields = getattr(
-            instance, self.interested_related_fields_param_name, [])
-        for field_name in interested_related_fields:
+        interested_related_objects = getattr(
+            instance, self.interested_related_objects_param_name, [])
+        for field_name in interested_related_objects:
             try:
-                field = instance._meta.get_field(field_name)
+                instance._meta.get_field(field_name)
             except FieldDoesNotExist:
                 logger.error('Field "{}" is invalid.'.format(field_name))
             else:
-                interested_object = getattr(instance, field.attname)
+                interested_object = instance.__getattribute__(field_name)
                 instance_class_name = instance.__class__.__name__
                 instance_name = instance_class_name.lower()
                 history_message = '{action}d {object_type}'.format(

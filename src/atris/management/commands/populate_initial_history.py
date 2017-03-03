@@ -11,10 +11,11 @@ from django.core.management import BaseCommand
 from django.db import DatabaseError
 from django.db.transaction import atomic
 
-from atris.models import HistoricalRecord, registered_models
+from atris.models import get_history_model, registered_models
 
 
 str = str if six.PY2 else str
+HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):

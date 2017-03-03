@@ -5,10 +5,11 @@ from django.core.management import BaseCommand
 from django.db import transaction, connection
 from django.utils.timezone import now
 
-from atris.models import HistoricalRecord
+from atris.models import get_history_model
 
 
 logger = logging.getLogger('old_history_archiving')
+HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):

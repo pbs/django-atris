@@ -341,6 +341,7 @@ class TestModelsBasicFunctionality(TestCase):
 
 
 class TestHistoryLoggingOrdering(TestCase):
+
     def test_global_history_is_ordered_by_history_date(self):
         # clear the history state prior to test starting
         HistoricalRecord.objects.all().delete()
@@ -355,8 +356,12 @@ class TestHistoryLoggingOrdering(TestCase):
             polls.append(poll)
             choices.append(choice)
 
-        self.assertEquals(len(polls + choices),
-                          HistoricalRecord.objects.all().count())
+        self.assertEquals(
+            # Add twice the number of choices created because of the additional
+            # related object history created for polls because of choices.
+            len(polls) + 2 * len(choices),
+            HistoricalRecord.objects.all().count()
+        )
 
         for i in range(10):
             polls[i].question += '_updated'
@@ -365,17 +370,22 @@ class TestHistoryLoggingOrdering(TestCase):
             choices[i].save()
 
         self.assertEquals(
-            len(polls + choices) * 2,  # take updates into account
+            2 * len(polls) + 4 * len(choices),  # take updates into account
             HistoricalRecord.objects.all().count()
         )
-
-        oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
-        for entry in oldest_twenty_history_entries:
-            self.assertEquals('+', entry.history_type)
-
-        newest_twenty_history_entries = HistoricalRecord.objects.all()[:20]
-        for entry in newest_twenty_history_entries:
-            self.assertEquals('~', entry.history_type)
+        # assert
+        oldest_30_history_entries = HistoricalRecord.objects.values_list(
+            'content_type__model', 'history_type')[30:]
+        self.assertEqual(
+            list(oldest_30_history_entries),
+            [('poll', '~'), ('choice', '+'), ('poll', '+')] * 10
+        )
+        newest_30_history_entries = HistoricalRecord.objects.values_list(
+            'content_type__model', 'history_type')[:30]
+        self.assertEqual(
+            list(newest_30_history_entries),
+            [('poll', '~'), ('choice', '~'), ('poll', '~')] * 10
+        )
 
     def test_model_history_is_ordered_by_history_date(self):
         # clear the history state prior to test starting
@@ -390,30 +400,19 @@ class TestHistoryLoggingOrdering(TestCase):
                                            votes=0)
             polls.append(poll)
             choices.append(choice)
-
-        self.assertEquals(len(polls + choices),
-                          HistoricalRecord.objects.all().count())
-
         for i in range(10):
             polls[i].question += '_updated'
             polls[i].save()
             choices[i].choice += '_updated'
             choices[i].save()
-
-        self.assertEquals(
-            len(polls + choices) * 2,  # take updates into account
-            HistoricalRecord.objects.all().count()
-        )
-
-        oldest_ten_model_history_entries = Poll.history.all()[10:]
-
-        for entry in oldest_ten_model_history_entries:
-            self.assertEquals('+', entry.history_type)
-
-        newest_ten_model_history_entries = Poll.history.all()[:10]
-        for entry in newest_ten_model_history_entries:
-            self.assertEquals('~', entry.history_type)
-
+        # assert
+        oldest_20_model_history_entries = Poll.history.values_list(
+            'history_type', flat=True)[20:]
+        self.assertEqual(
+            list(oldest_20_model_history_entries), ['~', '+'] * 10)
+        newest_20_model_history_entries = Poll.history.values_list(
+            'history_type', flat=True)[:20]
+        self.assertEqual(list(newest_20_model_history_entries), ['~'] * 20)
         self.assertEquals('+', Choice.history.last().history_type)
         self.assertEquals('~', Choice.history.first().history_type)
 
@@ -426,6 +425,29 @@ class TestHistoryLoggingOrdering(TestCase):
 
         self.assertEquals('+', poll.history.last().history_type)
         self.assertEquals('~', poll.history.first().history_type)
+
+
+class TestRelatedHistory(TestCase):
+
+    def setUp(self):
+        HistoricalRecord.objects.all().delete()
+
+    def test_related_history_created_for_poll_when_choice_added(self):
+        # arrange
+        dinner = Poll.objects.create(question="What's for dinner?",
+                                     pub_date=now())
+        # act
+        Choice.objects.create(poll=dinner, choice='Ham & eggs', votes=0)
+        # assert
+        ham_history = HistoricalRecord.objects.get(
+            content_type__app_label=Choice._meta.app_label,
+            content_type__model=Choice._meta.model_name)
+        ham_for_dinner_history = HistoricalRecord.objects.get(
+            content_type__app_label=Poll._meta.app_label,
+            content_type__model=Poll._meta.model_name,
+            history_type='~'
+        )
+        assert ham_for_dinner_history.related_field_history == ham_history
 
 
 class TestHistoricalRecordQuerySet(TestCase):
@@ -450,12 +472,12 @@ class TestHistoricalRecordQuerySet(TestCase):
             Poll._meta.app_label, Poll._meta.model_name
         )
         # assert
-        assert result.count() == 4
+        self.assertEqual(result.count(), 5)
         poll_content_type = ContentType.objects.get_for_model(Poll)
         by_content_type = result.filter(content_type=poll_content_type)
-        assert by_content_type.filter(history_type='+').count() == 2
-        assert by_content_type.filter(history_type='-').count() == 1
-        assert by_content_type.filter(history_type='~').count() == 1
+        self.assertEqual(by_content_type.filter(history_type='+').count(), 2)
+        self.assertEqual(by_content_type.filter(history_type='-').count(), 1)
+        self.assertEqual(by_content_type.filter(history_type='~').count(), 2)
 
     def test_no_records_by_app_label_and_model_name_returned(self):
         # arrange

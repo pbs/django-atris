@@ -15,7 +15,7 @@ from django.utils.timezone import now
 
 str = unicode if six.PY2 else str
 
-registered_models = {}
+registered_models = {}  # TODO: is this necessary?
 
 logger = logging.getLogger(__name__)
 
@@ -147,9 +147,9 @@ class AbstractHistoricalRecord(models.Model):
                               blank=True, null=True)
 
     data = JSONField()
-    related_field_history = models.OneToOneField(
+    related_field_history = models.ForeignKey(
         'self',
-        related_name='referenced_object_history',
+        related_name='referenced_objects_history',
         on_delete=models.CASCADE,
         null=True,
         blank=True
@@ -168,6 +168,11 @@ class AbstractHistoricalRecord(models.Model):
         app_label = 'atris'
         ordering = ['-history_date']
         abstract = True
+
+    def __str__(self):
+        return '{} - {} - {}'.format(self.content_object,
+                                     self.get_history_type_display(),
+                                     self.history_date)
 
     def get_diff_to_prev_string(self):
         """

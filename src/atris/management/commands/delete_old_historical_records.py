@@ -2,9 +2,10 @@ import logging
 
 from django.core.management import BaseCommand
 
-from atris.models import HistoricalRecord
+from atris.models import get_history_model
 
 logger = logging.getLogger('old_history_deleting')
+HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):

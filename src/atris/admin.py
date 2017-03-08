@@ -27,7 +27,7 @@ class ContentTypeListFilter(admin.SimpleListFilter):
         followed_content_types = [
             ContentType.objects.get_for_model(model)
             for model in history_logging.registered_models.keys()
-            ]
+        ]
 
         filter_results = set()
         for content_type in followed_content_types:
@@ -54,10 +54,14 @@ class ApproxCountPgQuerySet(models.query.QuerySet):
 
         if hasattr(connections[self.db].client.connection, 'pg_version'):
             query = self.query
-            if (not query.where and query.high_mark is
-                None and query.low_mark == 0 and not query.select
-                and not query.group_by and not query.having
-                and not query.distinct):
+            no_filtration_used = (not query.where and
+                                  query.high_mark is None and
+                                  query.low_mark == 0 and
+                                  not query.select and
+                                  not query.group_by and
+                                  not query.having and
+                                  not query.distinct)
+            if no_filtration_used:
                 parts = [p.strip('"') for p in
                          self.model._meta.db_table.split('.')]
                 cursor = connections[self.db].cursor()

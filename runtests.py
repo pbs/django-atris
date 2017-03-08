@@ -45,7 +45,7 @@ DEFAULT_SETTINGS = dict(
 )
 
 
-def main():
+def main(tests):
     if not settings.configured:
         settings.configure(**DEFAULT_SETTINGS)
     if hasattr(django, 'setup'):
@@ -54,9 +54,9 @@ def main():
         from django.test.runner import DiscoverRunner
     except ImportError:
         from django.test.simple import DjangoTestSuiteRunner as DiscoverRunner
-    failures = DiscoverRunner(failfast=False, verbosity=2).run_tests(['tests'])
+    failures = DiscoverRunner(failfast=False, verbosity=2).run_tests(tests)
     sys.exit(failures)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

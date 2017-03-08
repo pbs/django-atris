@@ -16,11 +16,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='archivedhistoricalrecord',
             name='related_field_history',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='referenced_object_history', to='atris.ArchivedHistoricalRecord'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='referenced_objects_history', to='atris.ArchivedHistoricalRecord'),
         ),
         migrations.AddField(
             model_name='historicalrecord',
             name='related_field_history',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='referenced_object_history', to='atris.HistoricalRecord'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='referenced_objects_history', to='atris.HistoricalRecord'),
         ),
     ]

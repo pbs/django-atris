@@ -5,11 +5,13 @@ from __future__ import unicode_literals
 import logging
 import threading
 
-from django.core.exceptions import FieldDoesNotExist
-from django.db import models
+from django.db.models.signals import (
+    post_save, post_delete, class_prepared, m2m_changed
+)
 from django.utils import six
 
 from .historical_record import get_history_model
+from .exceptions import InvalidRelatedField
 
 
 str = unicode if six.PY2 else str
@@ -28,7 +30,7 @@ class HistoryLogging(object):
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
                  ignore_history_for_users='',
-                 interested_related_fields=''):
+                 interested_related_objects=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -46,7 +48,7 @@ class HistoryLogging(object):
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
-        self.interested_related_fields_param_name = interested_related_fields
+        self.interested_related_objects_param_name = interested_related_objects
         self.ignore_history_for_users = ignore_history_for_users
 
     def get_history_user(self, instance):
@@ -60,7 +62,8 @@ class HistoryLogging(object):
     def contribute_to_class(self, cls, name):
         self.manager_name = name
         self.module = cls.__module__
-        models.signals.class_prepared.connect(self.finalize, sender=cls)
+        self.model = cls
+        class_prepared.connect(self.finalize, sender=cls)
 
     def finalize(self, sender, **kwargs):
         if sender not in registered_models:
@@ -70,10 +73,24 @@ class HistoryLogging(object):
             }
         # The HistoricalRecord object will be discarded,
         # so the signal handlers can't use weak references.
-        models.signals.post_save.connect(self.post_save, sender=sender,
-                                         weak=False)
-        models.signals.post_delete.connect(self.post_delete, sender=sender,
-                                           weak=False)
+        post_save.connect(self.post_save, sender=sender, weak=False)
+        post_delete.connect(self.post_delete, sender=sender, weak=False)
+        self._excluded_fields_names = getattr(
+            sender, self.excluded_fields_param_name, [])
+        interested_related_objects = getattr(
+            sender, self.interested_related_objects_param_name, [])
+        self._interested_related_objects_fields = []
+        for field_name in interested_related_objects:
+            field = sender._meta.get_field(field_name)
+            if field.is_relation:
+                self._interested_related_objects_fields.append(field)
+                if field.many_to_many:
+                    m2m_changed.connect(self.m2m_changed,
+                                        sender=field.remote_field.through,
+                                        weak=False)
+            else:
+                raise InvalidRelatedField('{} is not a related field on {}'
+                                          .format(field.name, sender))
         setattr(sender, self.manager_name, HistoryManager())
 
     def post_save(self, instance, created, **kwargs):
@@ -82,6 +99,10 @@ class HistoryLogging(object):
 
     def post_delete(self, instance, **kwargs):
         self.create_historical_record(instance, '-')
+
+    def m2m_changed(self, instance, action, reverse, **kwargs):
+        if action.startswith('post_'):
+            self.create_historical_record(instance, '~')
 
     def create_historical_record(self, instance, history_type):
         history_user, history_user_id = self._get_user_info(instance)
@@ -113,15 +134,9 @@ class HistoryLogging(object):
             additional_data=additional_data
         )
 
-        interested_related_fields = getattr(
-            instance, self.interested_related_fields_param_name, [])
-        for field_name in interested_related_fields:
-            try:
-                field = instance._meta.get_field(field_name)
-            except FieldDoesNotExist:
-                logger.error('Field "{}" is invalid.'.format(field_name))
-            else:
-                interested_object = getattr(instance, field.attname)
+        for field in self._interested_related_objects_fields:
+            interested_objects = self._get_interested_objects(instance, field)
+            for interested_object in interested_objects:
                 instance_class_name = instance.__class__.__name__
                 instance_name = instance_class_name.lower()
                 history_message = '{action}d {object_type}'.format(
@@ -151,6 +166,23 @@ class HistoryLogging(object):
         else:
             return list()
 
+    @staticmethod
+    def _get_interested_objects(instance, field):
+        referenced_object = instance.__getattribute__(field.name)
+        if field.one_to_one or field.many_to_one:
+            # A single result is guaranteed.
+            result = [referenced_object] if referenced_object else []
+        elif field.one_to_many or field.many_to_many:
+            # The attribute is a RelatedManager instance.
+            result = list(referenced_object.all())
+        else:
+            raise TypeError(
+                'Field {} did not match any known related field types. Should '
+                'be one of: 1-to-1, 1-to-many, many-to-1, many-to-many.'.
+                format(field)
+            )
+        return result
+
     def skip_history_by_user(self, instance, user, user_id):
         skip_dict = getattr(instance, self.ignore_history_for_users, {})
         ids_with_skip = skip_dict.get('user_ids')
@@ -164,13 +196,17 @@ class HistoryLogging(object):
 
     def _get_field_data_from_instance(self, instance):
         data = {}
-        excluded_fields = getattr(
-            instance, self.excluded_fields_param_name, [])
-        for field in instance._meta.fields:
-            key = field.attname
-            if key not in excluded_fields:
-                value = getattr(instance, key)
-                data[key] = str(value) if value is not None else str(value)
+        all_instance_fields = (instance._meta.local_fields +
+                               instance._meta.local_many_to_many)
+        for field in all_instance_fields:
+            name = field.name
+            if name in self._excluded_fields_names:
+                continue
+            value = getattr(instance, field.attname)
+            if field.many_to_many:
+                data[name] = ', '.join([str(e.pk) for e in value.all()])
+            else:
+                data[name] = str(value) if value is not None else None
         return data
 
     def _get_tracked_fields_from_model(self, model_or_instance):

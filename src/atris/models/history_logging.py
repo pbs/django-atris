@@ -78,7 +78,7 @@ class HistoryLogging(object):
         self._excluded_fields_names = getattr(
             sender, self.excluded_fields_param_name, [])
         interested_related_objects = getattr(
-            sender, self.interested_related_objects_param_name, [])
+            sender, self.interested_related_fields_param_name, [])
         self._interested_related_objects_fields = []
         for field_name in interested_related_objects:
             field = sender._meta.get_field(field_name)

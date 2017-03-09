@@ -65,7 +65,7 @@ class Episode(models.Model):
     season = models.ForeignKey(Season, null=True)
     cast = models.ManyToManyField(Actor)
     author = models.OneToOneField(Writer)
-    interested_related_objects = ['show', 'cast', 'author']
+    interested_related_fields = ['show', 'cast', 'author']
     history = HistoryLogging(
-        interested_related_objects='interested_related_objects'
+        interested_related_fields='interested_related_fields'
     )

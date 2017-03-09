@@ -9,7 +9,9 @@ class Poll(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
 
     excluded_fields = ['updated_on']
+
     additional_data = {'where_from': 'Import'}  # default
+
     ignore_history_for_users = {'user_ids': [1010101],
                                 'user_names': ['ignore_user']}
 
@@ -24,7 +26,7 @@ class Choice(models.Model):
 
     history = HistoryLogging(
         additional_data_param_name='additional_data',
-        ignore_history_for_users='ignore_history_for_users'  # noqa
+        ignore_history_for_users='ignore_history_for_users'
     )
 
 

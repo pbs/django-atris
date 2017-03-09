@@ -30,7 +30,7 @@ class HistoryLogging(object):
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
                  ignore_history_for_users='',
-                 interested_related_objects=''):
+                 interested_related_fields=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -48,7 +48,7 @@ class HistoryLogging(object):
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
-        self.interested_related_objects_param_name = interested_related_objects
+        self.interested_related_fields_param_name = interested_related_fields
         self.ignore_history_for_users = ignore_history_for_users
 
     def get_history_user(self, instance):

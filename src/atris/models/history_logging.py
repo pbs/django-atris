@@ -10,8 +10,9 @@ from django.db.models.signals import (
 )
 from django.utils import six
 
-from .historical_record import get_history_model
 from .exceptions import InvalidRelatedField
+from .helpers import get_diff_fields
+from .historical_record import get_history_model
 
 
 str = unicode if six.PY2 else str
@@ -75,7 +76,7 @@ class HistoryLogging(object):
         # so the signal handlers can't use weak references.
         post_save.connect(self.post_save, sender=sender, weak=False)
         post_delete.connect(self.post_delete, sender=sender, weak=False)
-        self._excluded_fields_names = getattr(
+        self.excluded_fields_names = getattr(
             sender, self.excluded_fields_param_name, [])
         interested_related_objects = getattr(
             sender, self.interested_related_fields_param_name, [])
@@ -91,6 +92,7 @@ class HistoryLogging(object):
             else:
                 raise InvalidRelatedField('{} is not a related field on {}'
                                           .format(field.name, sender))
+        setattr(sender._meta, 'history_logging', self)
         setattr(sender, self.manager_name, HistoryManager())
 
     def post_save(self, instance, created, **kwargs):
@@ -113,16 +115,18 @@ class HistoryLogging(object):
 
         data = self._get_field_data_from_instance(instance)
         if history_type == '~':
-            diff_fields = self._get_diff_fields(data, instance)
+            previous_data = getattr(instance.history.first(), 'data', None)
+            diff_fields = get_diff_fields(instance, data, previous_data,
+                                          self.excluded_fields_names)
+            should_generate_history = diff_fields is None or diff_fields
         else:
             diff_fields = list()
+            should_generate_history = True
 
-        additional_data = dict(
-            (key, str(value)) for (key, value)
-            in getattr(instance, self.additional_data_param_name, {}).items()
-        )
+        if not should_generate_history:
+            return
 
-        # TODO: Only create History if there are non-excluded fields that differ
+        additional_data = self._get_additional_data(instance)
 
         instance_history = HistoricalRecord.objects.create(
             content_object=instance,
@@ -154,17 +158,16 @@ class HistoryLogging(object):
                     related_field_history=instance_history
                 )
 
-    def _get_diff_fields(self, data, instance):
-        if instance.history.exists():
-            previous_snapshot = instance.history.first()
-            return (
-                [instance._meta.get_field(attr).verbose_name
-                 for (attr, val) in data.items()
-                 if (attr, val) not in previous_snapshot.data.items()] or
-                ['with no change']
-            )
+    def _get_additional_data(self, instance):
+        try:
+            additional_data = getattr(instance,
+                                      self.additional_data_param_name)
+        except AttributeError:
+            result = {}
         else:
-            return list()
+            result = {key: str(value)
+                      for key, value in additional_data.items()}
+        return result
 
     @staticmethod
     def _get_interested_objects(instance, field):
@@ -200,7 +203,7 @@ class HistoryLogging(object):
                                instance._meta.local_many_to_many)
         for field in all_instance_fields:
             name = field.name
-            if name in self._excluded_fields_names:
+            if name in self.excluded_fields_names:
                 continue
             value = getattr(instance, field.attname)
             if field.many_to_many:

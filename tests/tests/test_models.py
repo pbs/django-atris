@@ -19,6 +19,7 @@ str = unicode if six.PY2 else str
 
 
 class TestModelsBasicFunctionality(TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.poll = Poll.objects.create(question='question', pub_date=now())
@@ -145,6 +146,8 @@ class TestModelsBasicFunctionality(TestCase):
         )
         self.assertEquals(0, len(choice.history.first().additional_data))
         choice.additional_data = {'where_from': 'System'}
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals(2, choice.history.count())
         self.assertEquals('System',
@@ -154,6 +157,16 @@ class TestModelsBasicFunctionality(TestCase):
         choice_fields_len = len(Choice._meta.fields)
         choice_history_data_len = len(self.choice.history.first().data)
         self.assertEquals(choice_fields_len, choice_history_data_len)
+
+    def test_history_not_generated_if_no_fields_changed(self):
+        # arrange
+        lastest_history = self.poll.history.first()
+        previous_history_count = self.poll.history.count()
+        # act
+        self.poll.save()
+        # assert
+        self.assertEqual(self.poll.history.first(), lastest_history)
+        self.assertEqual(self.poll.history.count(), previous_history_count)
 
     def test_excluded_fields_are_absent(self):
         poll_fields = Poll._meta.fields
@@ -172,10 +185,14 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertIsNone(choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
         choice.history_user = User(username='test_user')
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals('test_user', choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
         choice.history_user = User(id=1, username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 2
         choice.save()
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
@@ -193,6 +210,8 @@ class TestModelsBasicFunctionality(TestCase):
         # should be used as the history_user string as a priority.
         choice.history_user = User(username='test_user', first_name='John',
                                    last_name='Doe', email='john.doe@mail.com')
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals('John Doe', choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
@@ -200,6 +219,8 @@ class TestModelsBasicFunctionality(TestCase):
         # If only the email and username are provided, the email should be used
         choice.history_user = User(id=1, email='john.doe@mail.com',
                                    username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 2
         choice.save()
         self.assertEquals('john.doe@mail.com',
                           choice.history.first().history_user)
@@ -207,6 +228,8 @@ class TestModelsBasicFunctionality(TestCase):
 
         # When only the user name is provided, use that.
         choice.history_user = User(id=1, username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 3
         choice.save()
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
@@ -256,18 +279,6 @@ class TestModelsBasicFunctionality(TestCase):
             choice.history.first().get_diff_to_prev_string(),
             "Shouldn't be able to generate diff."
         )
-
-    def test_updated_with_no_change(self):
-        choice = Choice.objects.create(
-            poll=self.poll,
-            choice='choice_3',
-            votes=0
-        )
-        self.assertEquals('Created Choice',
-                          choice.history.first().get_diff_to_prev_string())
-        choice.save()
-        self.assertEquals('Updated with no change',
-                          choice.history.first().get_diff_to_prev_string())
 
     def test_history_diff_is_generated_if_none(self):
         choice = Choice.objects.create(

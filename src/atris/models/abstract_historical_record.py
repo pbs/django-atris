@@ -18,7 +18,6 @@ from .helpers import get_diff_fields
 
 str = unicode if six.PY2 else str
 
-registered_models = {}  # TODO: is this necessary?
 
 logger = logging.getLogger(__name__)
 

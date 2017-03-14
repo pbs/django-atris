@@ -159,6 +159,9 @@ class AbstractHistoricalRecord(models.Model):
     additional_data = JSONField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
 
+    def __str__(self):
+        return self.__unicode__()
+
     def __unicode__(self):
         return '{history_type} {content_type} id={object_id}'.format(
             history_type=self.get_history_type_display(),
@@ -170,11 +173,6 @@ class AbstractHistoricalRecord(models.Model):
         app_label = 'atris'
         ordering = ['-history_date']
         abstract = True
-
-    def __str__(self):
-        return '{} - {} - {}'.format(self.content_object,
-                                     self.get_history_type_display(),
-                                     self.history_date)
 
     def get_diff_to_prev_string(self):
         """

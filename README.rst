@@ -53,6 +53,7 @@ Additional features:
 
    - Interested related fields -
                        *(added in version 1.1.0)*
+                       
                        if you wish to add history for the objects related to a model
                        when the model changes, you can do so by declaring a list with the names of
                        the related fields names. This is applicable to 1-to-1, 1-to-many and
@@ -81,6 +82,7 @@ For starters, the fields made available to you when inspecting a history instanc
     * additional_data = hstore field, contains additional data of the model instance in the form of a dict
 
 **NOTE #1**: A historical record will be generated only if there has been a change in the local model fields. *(New in version 1.1.0)*
+
 **NOTE #2**: You may implement your own `HistoricalRecord` class and specify it in your project's
 settings.py via `ATRIS_HISTORY_MODEL` as `<APP_NAME>.<MODEL_NAME>`. *(New in version 1.1.0)*
 

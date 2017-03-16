@@ -105,11 +105,7 @@ class HistoricalRecordQuerySet(QuerySet):
             object_id=object_id,
             id__lt=history_id
         )
-        if main_qs.count() <= 0:
-            result = None
-        else:
-            result = main_qs.order_by('-history_date').first()
-        return result
+        return main_qs.order_by('-history_date').first()
 
     def approx_count(self):
         """

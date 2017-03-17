@@ -1,41 +1,45 @@
-import logging
 from datetime import timedelta
-from optparse import make_option
+import logging
 
 from django.core.management import BaseCommand
 from django.db import transaction, connection
 from django.utils.timezone import now
 
-from atris.models import HistoricalRecord
+from atris.models import get_history_model
+
 
 logger = logging.getLogger('old_history_archiving')
+HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):
-    help = (
-        """
+
+    help = """
         Archives historical records older than the specified days or months.
         You must supply either the days or the weeks param.
         The historical entries older than the specified days will be moved to
         the "atris_archivedhistoricalrecord" table.
-        """
-    )
+    """
+
     PARAM_ERROR = 'You must supply either the days or the weeks param'
 
-    option_list = BaseCommand.option_list + (
-        make_option('--days',
-                    dest='days',
-                    type='int',
-                    default=None,
-                    help=('Any historical record older than the number of days'
-                          ' specified gets archived.')),
-        make_option('--weeks',
-                    dest='weeks',
-                    type='int',
-                    default=None,
-                    help=('Any historical record older than the number of'
-                          ' months specified gets archived.')),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--days',
+            dest='days',
+            type=int,
+            default=None,
+            help='Any historical record older than the number of days '
+                 'specified gets archived.'
+        )
+        parser.add_argument(
+            '--weeks',
+            dest='weeks',
+            type=int,
+            default=None,
+            help='Any historical record older than the number of '
+                 'months specified gets archived.'
+        )
 
     def handle(self, *args, **options):
         days = options.get('days')

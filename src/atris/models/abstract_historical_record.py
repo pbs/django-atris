@@ -13,9 +13,11 @@ from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.timezone import now
 
+from .helpers import get_diff_fields
+
+
 str = unicode if six.PY2 else str
 
-registered_models = {}
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,20 @@ class HistoricalRecordQuerySet(QuerySet):
         return self.filter(
             content_type__model=model._meta.model_name,
             content_type__app_label=model._meta.app_label
+        )
+
+    def by_app_label_and_model_name(self, app_label, model_name):
+        """
+        Gets historical record by app label and model name.
+        :param app_label: The name of the application in which the model is
+        defined.
+        :param model_name: The name of the model that has a HistoricalRecord
+        field.
+        :return: The entire history of the model.
+        """
+        return self.filter(
+            content_type__model=model_name,
+            content_type__app_label=app_label
         )
 
     def most_recent(self):
@@ -89,11 +105,7 @@ class HistoricalRecordQuerySet(QuerySet):
             object_id=object_id,
             id__lt=history_id
         )
-        if main_qs.count() <= 0:
-            return None
-        result = main_qs.order_by('-history_date').first()
-
-        return result
+        return main_qs.order_by('-history_date').first()
 
     def approx_count(self):
         """
@@ -129,13 +141,22 @@ class AbstractHistoricalRecord(models.Model):
         ),
         db_index=True
     )
-
     history_diff = ArrayField(models.CharField(max_length=200),
                               blank=True, null=True)
 
     data = JSONField()
+    related_field_history = models.ForeignKey(
+        'self',
+        related_name='referenced_objects_history',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
     additional_data = JSONField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
+
+    def __str__(self):
+        return self.__unicode__()
 
     def __unicode__(self):
         return '{history_type} {content_type} id={object_id}'.format(
@@ -157,34 +178,30 @@ class AbstractHistoricalRecord(models.Model):
         :return: Said string.
         :rtype String
         """
-        diff_string = '{}d '.format(self.get_history_type_display())
-
-        if 'Update' not in diff_string:
-            return '{action}{object}'.format(
-                action=diff_string,
-                object=self.content_type.model.capitalize()
-            )
-
+        # Recalculating diff in case the missing history has been
+        # generated/restored.
         if self.history_diff is None:
-            previous_version = self._get_prev_version()
-            if previous_version:
-                self.history_diff = (
-                    [self.content_type.model_class()._meta.get_field(
-                        attr).verbose_name for
-                     (attr, val) in self.data.items()
-                     if (attr, val) not in previous_version.data.items()] or
-                    ['with no change']
-                )
+            self._regenerate_history_diff()
+        diff_string = '{}d '.format(self.get_history_type_display())
+        if self.history_type == '~':
+            if self.history_diff is None:
+                diff_string = 'No prior information available.'
+            elif not self.history_diff:
+                diff_string += 'with no change'
             else:
-                self.history_diff = []
-            self.save()
-
-        if not self.history_diff:
-            return 'No prior information available.'
-
-        diff_string += ', '.join(sorted(self.history_diff))
-
+                diff_string += ', '.join(sorted(self.history_diff))
+        else:
+            diff_string += self.content_type.model.capitalize()
         return diff_string
+
+    def _regenerate_history_diff(self):
+        previous_data = getattr(self._get_prev_version(), 'data', None)
+        tracked_model = self.content_type.model_class()
+        excluded_fields = (tracked_model._meta.history_logging
+                           .excluded_fields_names)
+        self.history_diff = get_diff_fields(tracked_model, self.data,
+                                            previous_data, excluded_fields)
+        self.save(update_fields=['history_diff'])
 
     def _get_prev_version(self):
         return self.__class__.objects.previous_version_by_model_and_id(

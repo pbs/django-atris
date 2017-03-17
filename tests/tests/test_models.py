@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from __future__ import print_function
+from unittest import TestCase, skip
 from django.utils import six
 
-str = unicode if six.PY2 else str
-
-from unittest import TestCase
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 
 from django.utils.timezone import now
 
 from atris.models import HistoricalRecord
-from tests.models import Poll, Choice, Voter
+from tests.models import (
+    Poll, Choice, Voter, Show, Season, Actor, Writer, Episode
+)
+
+
+str = unicode if six.PY2 else str
 
 
 class TestModelsBasicFunctionality(TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.poll = Poll.objects.create(question='question', pub_date=now())
@@ -34,7 +39,7 @@ class TestModelsBasicFunctionality(TestCase):
                           self.choice.history.last().object_id)
         self.assertEquals('+', self.choice.history.last().history_type)
         self.assertEquals(str(self.choice.poll_id),
-                          self.choice.history.last().data['poll_id'])
+                          self.choice.history.last().data['poll'])
 
         self.assertEquals(self.poll.id,
                           self.poll.history.last().object_id)
@@ -80,7 +85,7 @@ class TestModelsBasicFunctionality(TestCase):
 
         self.assertEquals(3, self.choice.history.count())
         self.assertEquals(str(self.choice.poll_id),
-                          self.choice.history.first().data['poll_id'])
+                          self.choice.history.first().data['poll'])
         self.assertEquals(
             'Updated choice, poll',
             self.choice.history.first().get_diff_to_prev_string()
@@ -141,6 +146,8 @@ class TestModelsBasicFunctionality(TestCase):
         )
         self.assertEquals(0, len(choice.history.first().additional_data))
         choice.additional_data = {'where_from': 'System'}
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals(2, choice.history.count())
         self.assertEquals('System',
@@ -150,6 +157,16 @@ class TestModelsBasicFunctionality(TestCase):
         choice_fields_len = len(Choice._meta.fields)
         choice_history_data_len = len(self.choice.history.first().data)
         self.assertEquals(choice_fields_len, choice_history_data_len)
+
+    def test_history_not_generated_if_no_fields_changed(self):
+        # arrange
+        lastest_history = self.poll.history.first()
+        previous_history_count = self.poll.history.count()
+        # act
+        self.poll.save()
+        # assert
+        self.assertEqual(self.poll.history.first(), lastest_history)
+        self.assertEqual(self.poll.history.count(), previous_history_count)
 
     def test_excluded_fields_are_absent(self):
         poll_fields = Poll._meta.fields
@@ -168,10 +185,14 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertIsNone(choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
         choice.history_user = User(username='test_user')
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals('test_user', choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
         choice.history_user = User(id=1, username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 2
         choice.save()
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
@@ -189,6 +210,8 @@ class TestModelsBasicFunctionality(TestCase):
         # should be used as the history_user string as a priority.
         choice.history_user = User(username='test_user', first_name='John',
                                    last_name='Doe', email='john.doe@mail.com')
+        # a change should be made for the history to be logged
+        choice.votes = 1
         choice.save()
         self.assertEquals('John Doe', choice.history.first().history_user)
         self.assertIsNone(choice.history.first().history_user_id)
@@ -196,6 +219,8 @@ class TestModelsBasicFunctionality(TestCase):
         # If only the email and username are provided, the email should be used
         choice.history_user = User(id=1, email='john.doe@mail.com',
                                    username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 2
         choice.save()
         self.assertEquals('john.doe@mail.com',
                           choice.history.first().history_user)
@@ -203,6 +228,8 @@ class TestModelsBasicFunctionality(TestCase):
 
         # When only the user name is provided, use that.
         choice.history_user = User(id=1, username='test_user_2')
+        # a change should be made for the history to be logged
+        choice.votes = 3
         choice.save()
         self.assertEquals('test_user_2', choice.history.first().history_user)
         self.assertEquals(1, choice.history.first().history_user_id)
@@ -252,18 +279,6 @@ class TestModelsBasicFunctionality(TestCase):
             choice.history.first().get_diff_to_prev_string(),
             "Shouldn't be able to generate diff."
         )
-
-    def test_updated_with_no_change(self):
-        choice = Choice.objects.create(
-            poll=self.poll,
-            choice='choice_3',
-            votes=0
-        )
-        self.assertEquals('Created Choice',
-                          choice.history.first().get_diff_to_prev_string())
-        choice.save()
-        self.assertEquals('Updated with no change',
-                          choice.history.first().get_diff_to_prev_string())
 
     def test_history_diff_is_generated_if_none(self):
         choice = Choice.objects.create(
@@ -339,6 +354,7 @@ class TestModelsBasicFunctionality(TestCase):
 
 
 class TestHistoryLoggingOrdering(TestCase):
+
     def test_global_history_is_ordered_by_history_date(self):
         # clear the history state prior to test starting
         HistoricalRecord.objects.all().delete()
@@ -362,8 +378,10 @@ class TestHistoryLoggingOrdering(TestCase):
             choices[i].choice += '_updated'
             choices[i].save()
 
-        self.assertEquals(len(polls + choices) * 2,  # take updates into account
-                          HistoricalRecord.objects.all().count())
+        self.assertEquals(
+            len(polls + choices) * 2,  # take updates into account
+            HistoricalRecord.objects.all().count()
+        )
 
         oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
         for entry in oldest_twenty_history_entries:
@@ -396,8 +414,10 @@ class TestHistoryLoggingOrdering(TestCase):
             choices[i].choice += '_updated'
             choices[i].save()
 
-        self.assertEquals(len(polls + choices) * 2,  # take updates into account
-                          HistoricalRecord.objects.all().count())
+        self.assertEquals(
+            len(polls + choices) * 2,  # take updates into account
+            HistoricalRecord.objects.all().count()
+        )
 
         oldest_ten_model_history_entries = Poll.history.all()[10:]
 
@@ -420,3 +440,406 @@ class TestHistoryLoggingOrdering(TestCase):
 
         self.assertEquals('+', poll.history.last().history_type)
         self.assertEquals('~', poll.history.first().history_type)
+
+
+class TestRelatedHistory(TestCase):
+
+    def setUp(self):
+        HistoricalRecord.objects.all().delete()
+
+    def test_related_history_created_for_show_and_writer_when_episode_added(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        # act
+        Episode.objects.create(title='Unknown Soldier',
+                               description='',
+                               show=show,
+                               author=writer)
+        # assert
+        episode_history = self._history_for(Episode, '+').first()
+        show_episode_history = self._history_for(Show, '~').first()
+        self.assertEqual(show_episode_history.related_field_history,
+                         episode_history)
+        self.assertEqual(show_episode_history.history_diff, ['episode'])
+        self.assertEqual(show_episode_history.additional_data['episode'],
+                         'Created Episode')
+        episode_writer_history = self._history_for(Writer, '~').first()
+        self.assertEqual(episode_writer_history.related_field_history,
+                         episode_history)
+        self.assertEqual(episode_writer_history.history_diff, ['episode'])
+        self.assertEqual(episode_writer_history.additional_data['episode'],
+                         'Created Episode')
+
+    def test_related_history_not_created_for_season_when_episode_added(self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        season = Season.objects.create(title='Season 2',
+                                       description='',
+                                       show=show)
+        writer = Writer.objects.create(name='David Zabel')
+        # act
+        Episode.objects.create(
+            title='Unknown Soldier',
+            description='',
+            season=season,
+            author=writer
+        )
+        # assert
+        season_episode_history = self._history_for(Season, '~')
+        self.assertFalse(season_episode_history.exists())
+        episode_history = self._history_for(Episode, '+')
+        self.assertTrue(episode_history.exists())
+
+    def test_related_history_created_for_all_actors_when_cast_added_on_episode(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        # act
+        episode.cast.add(actor1, actor2)
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        actor_updates = self._history_for(Actor, '~')
+        actor1_episode_history = actor_updates.get(object_id=actor1.pk)
+        self.assertEqual(actor1_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor1_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor1_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        actor2_episode_history = actor_updates.get(object_id=actor2.pk)
+        self.assertEqual(actor2_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_show_writer_when_cast_added_on_episode(  # noqa
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        # act
+        episode.cast.add(actor1, actor2)
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        show_episode_history = self._history_for(Show, '~').first()
+        self.assertEqual(show_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(show_episode_history.history_diff, ['episode'])
+        self.assertEqual(show_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        episode_writer_history = self._history_for(Writer, '~').first()
+        self.assertEqual(episode_writer_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(episode_writer_history.history_diff, ['episode'])
+        self.assertEqual(episode_writer_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_all_actors_when_cast_set_on_episode(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        # act
+        episode.cast.set([actor1, actor2])
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        actor_updates = self._history_for(Actor, '~')
+        actor1_episode_history = actor_updates.get(object_id=actor1.pk)
+        self.assertEqual(actor1_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor1_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor1_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        actor2_episode_history = actor_updates.get(object_id=actor2.pk)
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor2_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_remaining_actors_when_removing_actor_from_episode_cast(  # noqa
+            self):
+        # NOTE: This behaviour needs to be fixed in a future release. See the
+        # note for TestRelatedHistoryThingsToBeImproved.
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        episode.cast.add(actor1, actor2)
+        # act
+        episode.cast.remove(actor1)
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        actor_updates = self._history_for(Actor, '~')
+        actor1_episode_history = actor_updates.filter(
+            object_id=actor1.pk,
+            related_field_history=episode_cast_history
+        )
+        self.assertFalse(actor1_episode_history.exists())
+        actor2_episode_history = actor_updates.filter(
+            object_id=actor2.pk
+        ).first()
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor2_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_updating_episode_creates_related_history_for_show_writer_actors(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        episode.cast.add(actor1, actor2)
+        # act
+        episode.description = 'Lisette draws the face of a soldier...'
+        # assert
+        episode_update_history = self._history_for(Episode, '~').first()
+        show_episode_history = self._history_for(Show, '~').first()
+        self.assertEqual(show_episode_history.related_field_history,
+                         episode_update_history)
+        self.assertEqual(show_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        episode_writer_history = self._history_for(Writer, '~').first()
+        self.assertEqual(episode_writer_history.related_field_history,
+                         episode_update_history)
+        self.assertEqual(episode_writer_history.additional_data['episode'],
+                         'Updated Episode')
+        actor_updates = self._history_for(Actor, '~')
+        actor1_episode_history = actor_updates.get(object_id=actor1.pk)
+        self.assertEqual(actor1_episode_history.related_field_history,
+                         episode_update_history)
+        self.assertEqual(actor1_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        actor2_episode_history = actor_updates.get(object_id=actor2.pk)
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_update_history)
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_show_writer_when_episode_deleted(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor = Actor.objects.create(name='McKinley Belcher III')
+        episode.cast.add(actor)
+        # act
+        episode.delete()
+        # assert
+        episode_history = self._history_for(Episode, '-').first()
+        show_episode_history = self._history_for(Show, '~').first()
+        self.assertEqual(show_episode_history.related_field_history,
+                         episode_history)
+        self.assertEqual(show_episode_history.history_diff, ['episode'])
+        self.assertEqual(show_episode_history.additional_data['episode'],
+                         'Deleted Episode')
+        episode_writer_history = self._history_for(Writer, '~').first()
+        self.assertEqual(episode_writer_history.related_field_history,
+                         episode_history)
+        self.assertEqual(episode_writer_history.history_diff, ['episode'])
+        self.assertEqual(episode_writer_history.additional_data['episode'],
+                         'Deleted Episode')
+
+    def test_related_history_not_created_for_season_when_episode_deleted(self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        season = Season.objects.create(title='Season 2',
+                                       description='',
+                                       show=show)
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         season=season,
+                                         author=writer)
+        # act
+        episode.delete()
+        # assert
+        season_episode_history = self._history_for(Season, '~')
+        self.assertFalse(season_episode_history.exists())
+        episode_history = self._history_for(Episode, '-')
+        self.assertTrue(episode_history.exists())
+
+    def _history_for(self, class_, type_=None):
+        result = HistoricalRecord.objects.filter(
+            content_type__app_label=class_._meta.app_label,
+            content_type__model=class_._meta.model_name
+        )
+        if type_ is not None:
+            result = result.filter(history_type=type_)
+        return result
+
+
+@skip('Related history on the objects refered to by the ManyToMany fields can '
+      'only be tracked using both the pre_ and post_ remove/clear/delete. '
+      'This requires a more complex implementation and will be deferred.')
+class TestRelatedHistoryThingsToBeImproved(TestCase):
+
+    def test_related_history_created_for_actors_when_clearing_episode_cast(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        episode.cast.add(actor1, actor2)
+        # act
+        episode.cast.clear()
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        self.assertEqual(episode_cast_history.history_diff, ['cast'])
+        actor_updates = self._history_for(Actor, '~').filter(
+            related_field_history=episode_cast_history
+        )
+        actor1_episode_history = actor_updates.filter(
+            object_id=actor1.pk
+        ).first()
+        self.assertEqual(actor1_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor1_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor1_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        actor2_episode_history = actor_updates.filter(
+            object_id=actor2.pk
+        ).first()
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor2_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_actors_when_removing_actor_from_episode_cast(  # noqa
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor1 = Actor.objects.create(name='McKinley Belcher III')
+        actor2 = Actor.objects.create(name='Suzanne Bertish')
+        episode.cast.add(actor1, actor2)
+        # act
+        episode.cast.remove(actor1)
+        # assert
+        episode_cast_history = self._history_for(Episode, '~').first()
+        actor_updates = self._history_for(Actor, '~')
+        actor1_episode_history = actor_updates.filter(
+            object_id=actor1.pk,
+            related_field_history=episode_cast_history
+        )
+        self.assertEqual(actor1_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor1_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor1_episode_history.additional_data['episode'],
+                         'Updated Episode')
+        actor2_episode_history = actor_updates.filter(
+            object_id=actor2.pk
+        ).first()
+        self.assertEqual(actor2_episode_history.related_field_history,
+                         episode_cast_history)
+        self.assertEqual(actor2_episode_history.history_diff, ['episode'])
+        self.assertEqual(actor2_episode_history.additional_data['episode'],
+                         'Updated Episode')
+
+    def test_related_history_created_for_actor_when_episode_deleted(self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        writer = Writer.objects.create(name='David Zabel')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         show=show,
+                                         author=writer)
+        actor = Actor.objects.create(name='McKinley Belcher III')
+        episode.cast.add(actor)
+        # act
+        episode.delete()
+        # assert
+        episode_history = self._history_for(Episode, '-').first()
+        episode_actor_history = self._history_for(Actor, '~').first()
+        self.assertEqual(episode_actor_history.related_field_history,
+                         episode_history)
+        self.assertEqual(episode_actor_history.history_diff, ['episode'])
+        self.assertEqual(episode_actor_history.additional_data['episode'],
+                         'Deleted Episode')
+
+
+class TestHistoricalRecordQuerySet(TestCase):
+
+    def tearDown(self):
+        HistoricalRecord.objects.all().delete()
+
+    def test_get_records_by_app_label_and_model_name_returns_specific_entries(
+            self):
+        # arrange
+        weather = Poll.objects.create(question='How is the weather?',
+                                      pub_date=now())
+        dinner = Poll.objects.create(question='What is for dinner',
+                                     pub_date=now())
+        dinner.question = "What's for dinner?"
+        dinner.save()
+        weather.delete()
+        ham = Choice.objects.create(poll=dinner, choice='Ham & eggs', votes=0)
+        Voter.objects.create(choice=ham, name='John')
+        # act
+        result = HistoricalRecord.objects.by_app_label_and_model_name(
+            Poll._meta.app_label, Poll._meta.model_name
+        )
+        # assert
+        assert result.count() == 4
+        poll_content_type = ContentType.objects.get_for_model(Poll)
+        by_content_type = result.filter(content_type=poll_content_type)
+        assert by_content_type.filter(history_type='+').count() == 2
+        assert by_content_type.filter(history_type='-').count() == 1
+        assert by_content_type.filter(history_type='~').count() == 1
+
+    def test_no_records_by_app_label_and_model_name_returned(self):
+        # arrange
+        Poll.objects.create(question='How is the weather?', pub_date=now())
+        # act
+        result = HistoricalRecord.objects.by_app_label_and_model_name(
+            Choice._meta.app_label, Choice._meta.model_name
+        )
+        # assert
+        assert result.exists() is False

@@ -1,0 +1,2 @@
+class InvalidRelatedField(Exception):
+    pass

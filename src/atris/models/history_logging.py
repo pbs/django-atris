@@ -5,16 +5,23 @@ from __future__ import unicode_literals
 import logging
 import threading
 
-from django.db import models
+from django.db.models.signals import (
+    post_save, post_delete, class_prepared, m2m_changed
+)
 from django.utils import six
 
-from.historical_record import HistoricalRecord
+from .exceptions import InvalidRelatedField
+from .helpers import get_diff_fields, get_model_field_data
+from .historical_record import get_history_model
+
 
 str = unicode if six.PY2 else str
 
 registered_models = {}
 
 logger = logging.getLogger(__name__)
+
+HistoricalRecord = get_history_model()
 
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
@@ -23,7 +30,8 @@ class HistoryLogging(object):
 
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
-                 ignore_history_for_users=''):
+                 ignore_history_for_users='',
+                 interested_related_fields=''):
         """
         :param additional_data_param_name: String used to determine which field
          on the object contains a dict holding any additional data.
@@ -41,20 +49,22 @@ class HistoryLogging(object):
         """
         self.additional_data_param_name = additional_data_param_name
         self.excluded_fields_param_name = excluded_fields_param_name
-        self.ignore_history_for_users = ignore_history_for_users
+        self.interested_related_fields_param_name = interested_related_fields
+        self.ignore_history_for_users_param_name = ignore_history_for_users
 
-    def get_history_user(self, instance):
+    def get_history_user_from_request(self):
         """Get the modifying user from the middleware."""
         try:
             if self.thread.request.user.is_authenticated():
                 return self.thread.request.user
         except AttributeError:
-            return getattr(instance, 'history_user', None)
+            return
 
     def contribute_to_class(self, cls, name):
         self.manager_name = name
         self.module = cls.__module__
-        models.signals.class_prepared.connect(self.finalize, sender=cls)
+        self.model = cls
+        class_prepared.connect(self.finalize, sender=cls)
 
     def finalize(self, sender, **kwargs):
         if sender not in registered_models:
@@ -62,13 +72,31 @@ class HistoryLogging(object):
                 'additional_data_param_name': self.additional_data_param_name,
                 'excluded_fields_param_name': self.excluded_fields_param_name
             }
-        # The HistoricalRecords object will be discarded,
+        # The HistoricalRecord object will be discarded,
         # so the signal handlers can't use weak references.
-        models.signals.post_save.connect(self.post_save, sender=sender,
-                                         weak=False)
-        models.signals.post_delete.connect(self.post_delete, sender=sender,
-                                           weak=False)
+        post_save.connect(self.post_save, sender=sender, weak=False)
+        post_delete.connect(self.post_delete, sender=sender, weak=False)
+        self.excluded_fields_names = getattr(
+            sender, self.excluded_fields_param_name, [])
+        self._set_interested_related_fields_and_m2m_changed_signal(sender)
+        setattr(sender._meta, 'history_logging', self)
         setattr(sender, self.manager_name, HistoryManager())
+
+    def _set_interested_related_fields_and_m2m_changed_signal(self, sender):
+        self.interested_related_fields = []
+        interested_related_fields_name = getattr(
+            sender, self.interested_related_fields_param_name, [])
+        for field_name in interested_related_fields_name:
+            field = sender._meta.get_field(field_name)
+            if field.is_relation:
+                self.interested_related_fields.append(field)
+                if field.many_to_many:
+                    m2m_changed.connect(self.m2m_changed,
+                                        sender=field.remote_field.through,
+                                        weak=False)
+            else:
+                raise InvalidRelatedField('{} is not a related field on {}'
+                                          .format(field.name, sender))
 
     def post_save(self, instance, created, **kwargs):
         if not kwargs.get('raw', False):
@@ -77,75 +105,36 @@ class HistoryLogging(object):
     def post_delete(self, instance, **kwargs):
         self.create_historical_record(instance, '-')
 
+    def m2m_changed(self, instance, action, reverse, **kwargs):
+        if action.startswith('post_'):
+            self.create_historical_record(instance, '~')
+
     def create_historical_record(self, instance, history_type):
-        history_user, history_user_id = self._get_user_info(instance)
-        if self.skip_history_by_user(instance, history_user, history_user_id):
-            logger.info("Skipping history instance for user '{}' with user id"
-                        " '{}'".format(history_user, history_user_id))
-            return
-
-        data = self._get_fields_from_instance(instance)
-        if history_type == '~':
-            diff_fields = self._get_diff_fields(data, instance)
-        else:
-            diff_fields = list()
-
-        additional_data = dict(
-            (key, str(value)) for (key, value)
-            in getattr(instance, self.additional_data_param_name, {}).items()
+        ignored_users = getattr(
+            instance, self.ignore_history_for_users_param_name, {})
+        generate_history = HistoricalRecordGenerator(
+            instance,
+            history_type,
+            self.get_history_user_from_request(),
+            ignored_users
         )
+        generate_history()
 
-        HistoricalRecord.objects.create(
-            content_object=instance,
-            history_type=history_type,
-            history_user=history_user,
-            history_user_id=history_user_id,
-            data=data,
-            history_diff=diff_fields,
-            additional_data=additional_data
-        )
 
-    def _get_diff_fields(self, data, instance):
-        if instance.history.exists():
-            previous_snapshot = instance.history.first()
-            return (
-                [instance._meta.get_field(attr).verbose_name
-                 for (attr, val) in data.items()
-                 if (attr, val) not in previous_snapshot.data.items()] or
-                ['with no change']
-            )
-        else:
-            return list()
+class HistoricalRecordGenerator(object):
 
-    def skip_history_by_user(self, instance, user, user_id):
-        skip_dict = getattr(instance, self.ignore_history_for_users, {})
-        ids_with_skip = skip_dict.get('user_ids')
-        user_names_to_skip = skip_dict.get('user_names')
-        if skip_dict and (
-                (user_names_to_skip and (user in user_names_to_skip)) or
-                (ids_with_skip and (user_id in ids_with_skip))
-        ):
-            return True
-        return False
+    def __init__(self, instance, history_type, user, ignored_users={}):
+        self.instance = instance
+        self.history_logging = self.instance._meta.history_logging
+        self.history_type = history_type
+        self.user = user or getattr(instance, 'history_user', None)
+        self.ignored_users = ignored_users
+        self.history_user, self.history_user_id = self.get_user_info(self.user)
 
-    def _get_fields_from_instance(self, instance):
-        sentinel = object()
-        data = {}
-        excluded_fields = getattr(
-            instance, self.excluded_fields_param_name, [])
-        for field in instance._meta.fields:
-            if field.attname not in excluded_fields:
-                key = field.attname
-                value = getattr(instance, field.attname, sentinel)
-                if value is not None and value is not sentinel:
-                    value = str(value)
-                elif value is sentinel:
-                    logger.error(('Field "{}" is invalid.'.format(key)))
-                data[key] = value
-        return data
-
-    def _get_user_info(self, instance):
-        user = self.get_history_user(instance)
+    @staticmethod
+    def get_user_info(user):
+        if not user:
+            return None, None
         full_name = (user.get_full_name() if callable(
             getattr(user, 'get_full_name', None)) else None)
         username = (user.get_username() if callable(
@@ -154,8 +143,100 @@ class HistoryLogging(object):
             full_name or getattr(user, 'email', None) or username
             if user else None
         )
-        history_user_id = user.id if user else None
-        return history_user, history_user_id
+        return history_user, user.id
+
+    def __call__(self):
+        if self.should_skip_history_for_user():
+            logger.info(
+                "Skipping history instance for user '{}' with user id "
+                "'{}'".format(self.history_user, self.history_user_id)
+            )
+            return
+        data = get_model_field_data(self.instance)
+        diff_fields, should_generate_history = self.get_differing_fields(data)
+        if not should_generate_history:
+            return
+        self.instance_history = HistoricalRecord.objects.create(
+            content_object=self.instance,
+            history_type=self.history_type,
+            history_user=self.history_user,
+            history_user_id=self.history_user_id,
+            data=data,
+            history_diff=diff_fields,
+            additional_data=self.get_additional_data()
+        )
+        self.generate_history_for_interested_objects()
+
+    def should_skip_history_for_user(self):
+        ids_to_skip = self.ignored_users.get('user_ids', [])
+        user_names_to_skip = self.ignored_users.get('user_names', [])
+        return (self.history_user in user_names_to_skip or
+                self.history_user_id in ids_to_skip)
+
+    def get_differing_fields(self, data):
+        if self.history_type == '~':
+            previous_data = getattr(
+                self.instance.history.first(), 'data', None)
+            diff_fields = get_diff_fields(
+                self.instance, data, previous_data,
+                self.history_logging.excluded_fields_names
+            )
+            should_generate_history = diff_fields is None or diff_fields
+        else:
+            diff_fields = list()
+            should_generate_history = True
+        return diff_fields, should_generate_history
+
+    def get_additional_data(self):
+        try:
+            additional_data = getattr(
+                self.instance, self.history_logging.additional_data_param_name)
+        except AttributeError:
+            result = {}
+        else:
+            result = {key: str(value)
+                      for key, value in additional_data.items()}
+        return result
+
+    def get_interested_objects(self, field):
+        referenced_object = self.instance.__getattribute__(field.name)
+        if field.one_to_one or field.many_to_one:
+            # A single result is guaranteed.
+            result = [referenced_object] if referenced_object else []
+        elif field.one_to_many or field.many_to_many:
+            # The attribute is a RelatedManager instance.
+            result = list(referenced_object.all())
+        else:
+            raise TypeError(
+                'Field {} did not match any known related field types. Should '
+                'be one of: 1-to-1, 1-to-many, many-to-1, many-to-many.'.
+                format(field)
+            )
+        return result
+
+    def generate_history_for_interested_objects(self):
+        for field in self.history_logging.interested_related_fields:
+            interested_objects = self.get_interested_objects(field)
+            for interested_object in interested_objects:
+                self.generate_history_for_interested_object(interested_object)
+
+    def generate_history_for_interested_object(self, interested_object):
+        instance_class_name = self.instance.__class__.__name__
+        instance_name = instance_class_name.lower()
+        history_message = '{action}d {object_type}'.format(
+            action=self.instance_history.get_history_type_display(),
+            object_type=instance_class_name
+        )
+        HistoricalRecord.objects.create(
+            content_object=interested_object,
+            history_type='~',
+            history_user=self.history_user,
+            history_user_id=self.history_user_id,
+            data=get_model_field_data(interested_object),
+            history_diff=[instance_name],
+            additional_data={instance_name: history_message},
+            related_field_history=self.instance_history
+        )
 
 
 class HistoryManager(object):

@@ -26,25 +26,43 @@ Additional features:
                        an instance of your model, you can do so by adding a
                        dict to your model, which contains said additional data.
                        After creating that dict, use it when instantiating the
-                       HistoryLogging field.
+                       HistoryLogging field::
+
                             additional_data = {'changed_from':'djadmin'}
                             history = HistoryLogging(additional_data='additional_data')
+
    - Exclude fields -
-                      if you wish to not track some fields, all you need to do
+                      if you wish not to track some fields, all you need to do
                       is add a list to your model which contains the fields you
                       do not wish to track in a string format and use that list
-                      when instantiating the HistoryLogging field.
+                      when instantiating the HistoryLogging field::
+
                            exclude_fields = ['last_modified'] # as it would always appear to have been updated
                            history = HistoryLogging(exclude_fields='exclude_fields')
+
    - Ignore changes by user -
-                      if you wish to not track changes made by a specific user,
+                      if you wish not to track changes made by a specific user,
                       such as a user specially set up for smoke tests, you can declare
                       an additional field called however you like and pass it on
                       to the HistoryLogging object. This field must be a dictionary
                       that contains the keys 'user_ids' and 'user_names', both values
-                      for these keys must be lists containing the appropriate information.
+                      for these keys must be lists containing the appropriate information::
+
                            ignore_history_for_users = {'user_ids': [1010101], 'user_names': ['ignore_user']}
                            history = HistoryLogging(ignore_history_for_users='ignore_history_for_users')
+
+   - Interested related fields -
+                       *(added in version 1.1.0)*
+                       
+                       if you wish to add history for the objects related to a model
+                       when the model changes, you can do so by declaring a list with the names of
+                       the related fields names. This is applicable to 1-to-1, 1-to-many and
+                       many-to-many fields::
+
+                          poll = ForeignKey('Poll')
+                          ...
+                          interested_related_fields = ['poll']
+                          history = HistoryLogging(interested_related_fields='interested_related_fields')
 
 Usage guide
 -----------
@@ -58,8 +76,15 @@ For starters, the fields made available to you when inspecting a history instanc
     * history_user = the user that triggered the history instance (taken from middleware); For this string, the value it takes is prioritised in this order: fullname > email > username, if none are available it remains None.
     * history_user_id = the id of the user that triggered the history instance (taken from middleware)
     * history_type = type of history, +: Create, ~: Update, -:Delete (the method 'get_history_type_display()' gets you the string interpretation)
-    * data = hstore field, contains a snapshot (in the form of a dict) of the model instance that the history is being kept of, doesn't contain excluded fields nor additional data fields
+    * data = JSON field, contains a snapshot (in the form of a dict) of the model instance that the history is being kept of, doesn't contain excluded fields nor additional data fields.
+      All field values are converted to strings. The values of foreign keys are represented by the object ID as a string. The values of ManyoManyFilds are represented by a string
+      containing a comma-sparated list of IDs. *(New in version 1.1.0: changed key of ForeignKey fields from <FK_FIELD_NAME>_id to <FK_FIELD_NAME>; added entry for many-to-many field)*
     * additional_data = hstore field, contains additional data of the model instance in the form of a dict
+
+**NOTE #1**: A historical record will be generated only if there has been a change in the local model fields. *(New in version 1.1.0)*
+
+**NOTE #2**: You may implement your own `HistoricalRecord` class and specify it in your project's
+settings.py via `ATRIS_HISTORY_MODEL` as `<APP_NAME>.<MODEL_NAME>`. *(New in version 1.1.0)*
 
 Example of usage in code:
 * Classes we will use in example::
@@ -71,16 +96,20 @@ Example of usage in code:
     ...   excluded_fields = ['last_modified']
     ...   ignore_history_for_users = {'user_ids': [1010101], 'user_names': ['ignore_user']}
     ...   history = HistoryLogging(excluded_fields='excluded_fields',
-    ...                               ignore_history_for_users='ignore_history_for_users)
+    ...                            ignore_history_for_users='ignore_history_for_users)
 
     >>> class Bar(models.Model):
     ...   field_1 = models.CharField(max_length=255)
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
+    ...   fk_field = models.ForeignKey(Foo)
           # setting this specifies the default value for your additional data
     ...   additional_data = {'modified_from': 'code'}
     ...   excluded_fields = ['last_modified']
-    ...   history = HistoryLogging('additional_data', 'excluded_fields')
+    ...   interested_related_fields = ['fk_field']
+    ...   history = HistoryLogging('additional_data',
+    ...                            'excluded_fields',
+    ...                            interested_related_fields='interested_related_fields')
 
     >>> foo = Foo.objects.create(field_1='aaa', field_2=0)
     >>> foo_1 = Foo.objects.create(field_1='bar', field_2=1)
@@ -103,30 +132,34 @@ Example of usage in code:
 
 * Get all the history information for the Bar model::
 
-    Bar.objects.create(field_1='aaa', field_2=0)
+    Bar.objects.create(field_1='aaa', field_2=0, fk_field=foo)
     >>> Bar.history.all()
     [<HistoricalRecord: Create bar id=1>]
 
 * Get the global history information again::
 
     >>> HistoricalRecord.objects.all()
-    [<HistoricalRecord: Create bar id=1>, <HistoricalRecord: Create foo id=2>,
-     <HistoricalRecord: Create foo id=1>]
+    [<HistoricalRecord: Update foo id=1>, <HistoricalRecord: Create bar id=1>,
+      <HistoricalRecord: Create foo id=2>,<HistoricalRecord: Create foo id=1>]
+
+  Note that an "update" historical record has been created for `foo` when a
+  bar object was linked to it.
 
 * Another way of getting history for a model::
 
     >>> HistoricalRecord.objects.by_model(Foo)
-    [<HistoricalRecord: Create foo id=1>, <HistoricalRecord: Create foo id=2>]
+    [<HistoricalRecord: Update foo id=1>, <HistoricalRecord: Create foo id=1>,
+     <HistoricalRecord: Create foo id=2>]
 
 * Another way of getting history for an instance of a model useful for deleted objects that you still want a history for::
 
     >>> HistoricalRecord.objects.by_model_and_model_id(Foo, foo.id)
-    [<HistoricalRecord: Create foo id=1>]
+    [<HistoricalRecord: Update foo id=1>, <HistoricalRecord: Create foo id=1>]
 
 * Get the snapshot of the bar instance created::
 
     >>> bar.history.first().data
-    {u'field_1':u'aaa',u'field_2':u'0'}
+    {u'field_1': u'aaa', u'field_2': u'0', u'fk_field': u'1'}
 
 * Get the additional data of the bar instance::
 
@@ -136,6 +169,7 @@ Example of usage in code:
 * If you have a situation where the user cannot be determined from the django middleware you can also do the following::
 
     >>> bar.history_user = User(username='username') # where User is the django User model
+    >>> # Some other changes to bar so that a historical record will be generated.
     >>> bar.save()
     >>> bar.history.first().history_user
     u'username'

@@ -7,6 +7,7 @@ class Poll(models.Model):
     question = models.CharField(max_length=200)
     pub_date = models.DateTimeField('date published')
     updated_on = models.DateTimeField(auto_now=True)
+
     excluded_fields = ['updated_on']
 
     additional_data = {'where_from': 'Import'}  # default
@@ -23,10 +24,48 @@ class Choice(models.Model):
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
 
-    history = HistoryLogging(additional_data_param_name='additional_data',
-                             ignore_history_for_users='ignore_history_for_users')  # noqa
+    history = HistoryLogging(
+        additional_data_param_name='additional_data',
+        ignore_history_for_users='ignore_history_for_users'
+    )
 
 
 class Voter(models.Model):
     choice = models.ForeignKey(Choice, related_name='voters')
     name = models.CharField(max_length=200)
+
+
+class Show(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000)
+    history = HistoryLogging()
+
+
+class Season(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000)
+    show = models.ForeignKey(Show)
+    history = HistoryLogging()
+
+
+class Actor(models.Model):
+    name = models.CharField(max_length=100)
+    history = HistoryLogging()
+
+
+class Writer(models.Model):
+    name = models.CharField(max_length=100)
+    history = HistoryLogging()
+
+
+class Episode(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=1000)
+    show = models.ForeignKey(Show, null=True)
+    season = models.ForeignKey(Season, null=True)
+    cast = models.ManyToManyField(Actor)
+    author = models.OneToOneField(Writer)
+    interested_related_fields = ['show', 'cast', 'author']
+    history = HistoryLogging(
+        interested_related_fields='interested_related_fields'
+    )

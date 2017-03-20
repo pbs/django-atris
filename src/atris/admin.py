@@ -132,13 +132,13 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
         return mark_safe(table)
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, obj):
         return False
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, obj):
         return False
 
-    def related_field_history_admin(self, request, obj=None):
+    def related_field_history_admin(self, obj):
         return reverse(
             'admin:{app_label}_{model_name}_change'.format(
                 app_label=obj.content_type.app_label,

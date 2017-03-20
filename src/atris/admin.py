@@ -1,9 +1,15 @@
 from atris.models import HistoricalRecord
 from atris.models import history_logging
 from atris.models.archived_historical_record import ArchivedHistoricalRecord
+
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 from django.db import models, connections
+try:
+    from django.urls import reverse
+except ImportError:
+    # Backward compatibility with Django 1.9
+    from django.core.urlresolvers import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 
@@ -87,7 +93,7 @@ class GenericHistoryAdmin(admin.ModelAdmin):
     )
     fields = ['object_id', 'content_type', 'history_date', 'history_type',
               'history_user', 'difference_to_previous', 'fields_that_differ',
-              'history_snapshot', 'more_info']
+              'history_snapshot', 'more_info', 'related_field_history_admin']
 
     readonly_fields = fields
 
@@ -131,6 +137,17 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def related_field_history_admin(self, request, obj=None):
+        return reverse(
+            'admin:{app_label}_{model_name}_change'.format(
+                app_label=obj.content_type.app_label,
+                model_name=obj.content_type.model
+            ),
+            args=[obj.pk]
+        )
+    related_field_history_admin.short_description = 'Related Field History'
+    related_field_history_admin.empty_value_display = '--'
 
 
 class HistoricalRecordAdmin(GenericHistoryAdmin):

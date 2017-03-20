@@ -104,6 +104,9 @@ class GenericHistoryAdmin(admin.ModelAdmin):
     show_full_result_count = False
 
     def get_queryset(self, request):
+        # Capturing the request object in order to build the absolute URI in
+        # `related_field_history_admin`
+        self._request = request
         qs = super(GenericHistoryAdmin, self).get_queryset(request)
         return qs._clone(klass=ApproxCountPgQuerySet)
 
@@ -133,15 +136,19 @@ class GenericHistoryAdmin(admin.ModelAdmin):
         return mark_safe(table)
 
     def related_field_history_admin(self, obj):
-        return reverse(
-            'admin:{app_label}_{model_name}_change'.format(
-                app_label=obj.content_type.app_label,
-                model_name=obj.content_type.model
-            ),
-            args=[obj.pk]
-        )
+        if obj.related_field_history:
+            related_url = reverse('admin:atris_historicalrecord_change',
+                                  args=[obj.related_field_history.pk])
+            absolute_uri = self._request.build_absolute_uri(related_url)
+            related_object_model = obj.related_field_history.content_type.model
+            html = '<a href="{}">{}</a>'.format(
+                absolute_uri,
+                obj.additional_data[related_object_model]
+            )
+            return mark_safe(html)
+        else:
+            return '--'
     related_field_history_admin.short_description = 'Related Field History'
-    related_field_history_admin.empty_value_display = '--'
 
     def has_add_permission(self, request, obj=None):
         return False

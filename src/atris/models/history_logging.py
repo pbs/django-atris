@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+from sys import modules
 import threading
 
 from django.db.models.signals import (
@@ -76,24 +77,27 @@ class HistoryLogging(object):
         # so the signal handlers can't use weak references.
         post_save.connect(self.post_save, sender=sender, weak=False)
         post_delete.connect(self.post_delete, sender=sender, weak=False)
+        self._set_m2m_changed_signal_receiver(sender)
         self.excluded_fields_names = getattr(
             sender, self.excluded_fields_param_name, [])
-        self._set_interested_related_fields_and_m2m_changed_signal(sender)
+        self._set_interested_related_fields(sender)
         setattr(sender._meta, 'history_logging', self)
         setattr(sender, self.manager_name, HistoryManager())
 
-    def _set_interested_related_fields_and_m2m_changed_signal(self, sender):
-        self.interested_related_fields = []
+    def _set_m2m_changed_signal_receiver(self, sender):
+        for field in sender._meta.local_many_to_many:
+            m2m_changed.connect(self.m2m_changed,
+                                sender=get_through_class(sender, field),
+                                weak=False)
+
+    def _set_interested_related_fields(self, sender):
+        self.interested_related_fields = set()
         interested_related_fields_name = getattr(
             sender, self.interested_related_fields_param_name, [])
         for field_name in interested_related_fields_name:
             field = sender._meta.get_field(field_name)
             if field.is_relation:
-                self.interested_related_fields.append(field)
-                if field.many_to_many:
-                    m2m_changed.connect(self.m2m_changed,
-                                        sender=field.remote_field.through,
-                                        weak=False)
+                self.interested_related_fields.add(field)
             else:
                 raise InvalidRelatedField('{} is not a related field on {}'
                                           .format(field.name, sender))
@@ -119,6 +123,28 @@ class HistoryLogging(object):
             ignored_users
         )
         generate_history()
+
+
+def is_str(obj):
+    return isinstance(obj, str if six.PY3 else basestring)
+
+
+def get_through_class(model, field):
+    through = field.remote_field.through
+    if is_str(through):
+        module_class = through.rsplit('.', 1)
+        class_ = module_class.pop()
+        module_path = module_class[0] if module_class else model.__module__
+        through = getattr(find_module(module_path), class_)
+    return through
+
+
+def find_module(module_path):
+    if not module_path.endswith('.models'):
+        for path in modules.keys():
+            if path.endswith('.models') and module_path in path:
+                module_path = path
+    return modules[module_path]
 
 
 class HistoricalRecordGenerator(object):
@@ -227,6 +253,8 @@ class HistoricalRecordGenerator(object):
             action=self.instance_history.get_history_type_display(),
             object_type=instance_class_name
         )
+        additional_data = self.get_additional_data()
+        additional_data[instance_name] = history_message
         HistoricalRecord.objects.create(
             content_object=interested_object,
             history_type='~',
@@ -234,7 +262,7 @@ class HistoricalRecordGenerator(object):
             history_user_id=self.history_user_id,
             data=get_model_field_data(interested_object),
             history_diff=[instance_name],
-            additional_data={instance_name: history_message},
+            additional_data=additional_data,
             related_field_history=self.instance_history
         )
 

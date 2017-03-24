@@ -8,6 +8,7 @@ from datetime import timedelta
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField, JSONField
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models, connection
 from django.db.models.query import QuerySet
 from django.utils import six
@@ -189,10 +190,25 @@ class AbstractHistoricalRecord(models.Model):
             elif not self.history_diff:
                 diff_string += 'with no change'
             else:
-                diff_string += ', '.join(sorted(self.history_diff))
+                verbose_names = [
+                    self._get_field_name_display(field_name)
+                    for field_name in self.history_diff
+                ]
+                diff_string += ', '.join(sorted(verbose_names))
         else:
             diff_string += self.content_type.model.capitalize()
         return diff_string
+
+    def _get_field_name_display(self, field_name):
+        model = self.content_type.model_class()
+        try:
+            field = model._meta.get_field(field_name)
+        except FieldDoesNotExist:
+            return field_name.replace('_', ' ').title()
+        if hasattr(field, 'verbose_name'):
+            return field.verbose_name
+        else:
+            return field.name.replace('_', ' ').title()
 
     def _regenerate_history_diff(self):
         previous_data = getattr(self._get_prev_version(), 'data', None)

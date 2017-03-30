@@ -8,7 +8,7 @@ class Poll(models.Model):
     pub_date = models.DateTimeField('date published')
     updated_on = models.DateTimeField(auto_now=True)
 
-    excluded_fields = ['updated_on']
+    excluded_fields = ['updated_on', 'choices']
 
     additional_data = {'where_from': 'Import'}  # default
 
@@ -20,9 +20,12 @@ class Poll(models.Model):
 
 
 class Choice(models.Model):
-    poll = models.ForeignKey(Poll)
+    poll = models.ForeignKey(Poll, related_name='choices')
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
+
+    class Meta:
+        verbose_name = 'Choice'
 
     history = HistoryLogging(
         additional_data_param_name='additional_data',
@@ -64,7 +67,7 @@ class Episode(models.Model):
     show = models.ForeignKey(Show, null=True)
     season = models.ForeignKey(Season, null=True)
     cast = models.ManyToManyField(Actor)
-    author = models.OneToOneField(Writer)
+    author = models.OneToOneField(Writer, related_name='foobar')
     interested_related_fields = ['show', 'cast', 'author']
     history = HistoryLogging(
         interested_related_fields='interested_related_fields'

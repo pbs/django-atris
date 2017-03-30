@@ -6,6 +6,7 @@ import logging
 from sys import modules
 import threading
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.signals import (
     post_save, post_delete, class_prepared, m2m_changed
 )
@@ -225,7 +226,10 @@ class HistoricalRecordGenerator(object):
         return result
 
     def get_interested_objects(self, field):
-        referenced_object = self.instance.__getattribute__(field.name)
+        try:
+            referenced_object = self.instance.__getattribute__(field.name)
+        except ObjectDoesNotExist:
+            return []
         if field.one_to_one or field.many_to_one:
             # A single result is guaranteed.
             result = [referenced_object] if referenced_object else []

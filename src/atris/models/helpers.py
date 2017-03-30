@@ -1,3 +1,6 @@
+from django.core.exceptions import ObjectDoesNotExist
+
+
 def get_diff_fields(model, data, previous_data, excluded_fields_names):
     """
     Returns the fields of `data` for which the values differ in
@@ -16,16 +19,16 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
 def get_model_field_data(model):
     data = {}
     model_meta = model._meta
-    all_model_fields = (model_meta.local_fields +
-                        model_meta.local_many_to_many +
-                        list(model_meta.related_objects))
-    for field in all_model_fields:
+    for field in model_meta.get_fields():
         name = field.name
         if name in model_meta.history_logging.excluded_fields_names:
             continue
         attname = (field.attname if hasattr(field, 'attname')
                    else field.get_accessor_name())
-        value = getattr(model, attname)
+        try:
+            value = getattr(model, attname)
+        except ObjectDoesNotExist:
+            value = None
         if field.many_to_many or field.one_to_many:
             data[name] = ', '.join([str(e.pk) for e in value.all()])
         else:

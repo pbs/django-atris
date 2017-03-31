@@ -20,10 +20,9 @@ str = unicode if six.PY2 else str
 
 class TestModelsBasicFunctionality(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
+        HistoricalRecord.objects.all().delete()
         cls.poll = Poll.objects.create(question='question', pub_date=now())
-
         cls.choice = Choice.objects.create(
             poll=cls.poll,
             choice='choice_1',
@@ -69,10 +68,10 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEquals(2, self.choice.history.count())
         self.assertEquals(self.choice.choice,
                           self.choice.history.first().data['choice'])
-        self.assertEquals(['choice'],
-                          self.choice.history.most_recent().history_diff)
+        self.assertEquals(set(['choice', 'voters']),
+                          set(self.choice.history.most_recent().history_diff))
         self.assertEquals(
-            'Updated choice',
+            'Updated Voters, choice',
             self.choice.history.first().get_diff_to_prev_string()
         )
         self.assertEquals('~', self.choice.history.first().history_type)
@@ -154,7 +153,9 @@ class TestModelsBasicFunctionality(TestCase):
                           choice.history.first().additional_data['where_from'])
 
     def test_all_wanted_fields_are_present(self):
-        choice_fields_len = len(Choice._meta.fields)
+        # make sure we cover local fields, many-to-many fields and
+        # related objects
+        choice_fields_len = len(Choice._meta.get_fields())
         choice_history_data_len = len(self.choice.history.first().data)
         self.assertEquals(choice_fields_len, choice_history_data_len)
 
@@ -169,7 +170,7 @@ class TestModelsBasicFunctionality(TestCase):
         self.assertEqual(self.poll.history.count(), previous_history_count)
 
     def test_excluded_fields_are_absent(self):
-        poll_fields = Poll._meta.fields
+        poll_fields = Poll._meta.get_fields()
         history_poll_fields = self.poll.history.first().data
         self.assertTrue(Poll.excluded_fields[0]
                         not in [field for field in history_poll_fields])

@@ -8,7 +8,9 @@ from datetime import timedelta
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField, JSONField
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models, connection
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.timezone import now
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class HistoricalRecordQuerySet(QuerySet):
+
     def by_model_and_model_id(self, model, model_id):
         """
         Gets historical records by model and model id, so, basically the
@@ -33,6 +36,22 @@ class HistoricalRecordQuerySet(QuerySet):
         :rtype HistoricalRecord
         """
         return self.by_model(model).filter(object_id=model_id)
+
+    def by_model_proxy_and_id(self, model_proxy, id_):
+        """
+        When saving history for a Model Proxy, some information (especially
+        the related history) will be saved with the ContentType of the
+        concrete model. This method will return entries for both the proxy and
+        the concrete model with the given object ID.
+        """
+        concrete_model = model_proxy._meta.concrete_model
+        by_models = self.filter(
+            Q(content_type__model=model_proxy._meta.model_name) &
+            Q(content_type__app_label=model_proxy._meta.app_label) |
+            Q(content_type__model=concrete_model._meta.model_name) &
+            Q(content_type__app_label=concrete_model._meta.app_label)
+        )
+        return by_models.filter(object_id=id_)
 
     def by_model(self, model):
         # noinspection PyProtectedMember
@@ -127,7 +146,11 @@ class HistoricalRecordQuerySet(QuerySet):
 class AbstractHistoricalRecord(models.Model):
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField(db_index=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey(
+        'content_type',
+        'object_id',
+        for_concrete_model=False
+    )
 
     history_date = models.DateTimeField(auto_now_add=True, db_index=True)
     history_user = models.CharField(max_length=50, null=True)
@@ -189,10 +212,25 @@ class AbstractHistoricalRecord(models.Model):
             elif not self.history_diff:
                 diff_string += 'with no change'
             else:
-                diff_string += ', '.join(sorted(self.history_diff))
+                verbose_names = [
+                    self._get_field_name_display(field_name)
+                    for field_name in self.history_diff
+                ]
+                diff_string += ', '.join(sorted(verbose_names))
         else:
-            diff_string += self.content_type.model.capitalize()
+            diff_string += self.content_type.name
         return diff_string
+
+    def _get_field_name_display(self, field_name):
+        model = self.content_type.model_class()
+        try:
+            field = model._meta.get_field(field_name)
+        except FieldDoesNotExist:
+            return field_name.replace('_', ' ').title()
+        if hasattr(field, 'verbose_name'):
+            return field.verbose_name
+        else:
+            return field.name.replace('_', ' ').title()
 
     def _regenerate_history_diff(self):
         previous_data = getattr(self._get_prev_version(), 'data', None)

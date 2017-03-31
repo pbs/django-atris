@@ -121,7 +121,7 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
     def fields_that_differ(self, obj):
         if obj.history_diff:
-            return ','.join(obj.history_diff)
+            return ', '.join(obj.history_diff)
         return None
 
     def _dict_to_table(self, dict):

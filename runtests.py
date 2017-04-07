@@ -30,14 +30,18 @@ DEFAULT_SETTINGS = dict(
     DATABASES={
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'test_history_db',
+            'NAME': 'history_db',
             'USER': 'history_user2',
             'PASSWORD': 'pass',
-            'HOST': 'localhost'
+            'HOST': 'localhost',
+            'TEST': {
+                'NAME': 'test_history_db'
+            }
         }
     },
     MIDDLEWARE_CLASSES=[
         'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.common.CommonMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
         'atris.middleware.LoggingRequestMiddleware',

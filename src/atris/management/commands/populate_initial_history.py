@@ -12,7 +12,7 @@ from django.db import DatabaseError
 from django.db.transaction import atomic
 
 from atris.models import get_history_model, registered_models
-from atris.models.helpers import get_model_field_data
+from atris.models.helpers import get_instance_field_data
 
 
 str = str if six.PY2 else str
@@ -106,7 +106,7 @@ class ModelHistoryCreator(object):
                                              batch_size=self.create_batch_size)
 
     def create_history_for_object(self, obj):
-        data = get_model_field_data(obj)
+        data = get_instance_field_data(obj)
         additional_data = {
             key: str(value)
             for key, value in self.additional_data_field.items()

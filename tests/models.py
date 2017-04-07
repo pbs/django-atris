@@ -1,3 +1,6 @@
+from django.contrib.contenttypes.fields import (
+    ContentType, GenericRelation, GenericForeignKey
+)
 from django.db import models
 
 from atris.models import HistoryLogging
@@ -41,6 +44,8 @@ class Voter(models.Model):
 class Show(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
+    links = GenericRelation('Link')
+
     history = HistoryLogging()
 
 
@@ -48,27 +53,46 @@ class Season(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
     show = models.ForeignKey(Show)
+
     history = HistoryLogging()
 
 
 class Actor(models.Model):
     name = models.CharField(max_length=100)
+
     history = HistoryLogging()
 
 
 class Writer(models.Model):
     name = models.CharField(max_length=100)
-    history = HistoryLogging()
+
+    excluded_fields = ['contributions']
+    history = HistoryLogging(excluded_fields_param_name='excluded_fields')
 
 
 class Episode(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
-    show = models.ForeignKey(Show, null=True)
+    show = models.ForeignKey(Show, null=True, related_name='specials')
     season = models.ForeignKey(Season, null=True)
-    cast = models.ManyToManyField(Actor)
-    author = models.OneToOneField(Writer, related_name='foobar')
+    cast = models.ManyToManyField(Actor, related_name='filmography')
+    author = models.OneToOneField(Writer, related_name='work')
+    co_authors = models.ManyToManyField(Writer, related_name='contributions')
+
     interested_related_fields = ['show', 'cast', 'author']
+    history = HistoryLogging(
+        interested_related_fields='interested_related_fields'
+    )
+
+
+class Link(models.Model):
+    name = models.CharField(max_length=100)
+    url = models.CharField(max_length=256)
+    object_id = models.PositiveIntegerField()
+    content_type = models.ForeignKey(ContentType)
+    related_object = GenericForeignKey('content_type', 'object_id')
+
+    interested_related_fields = ['related_object']
     history = HistoryLogging(
         interested_related_fields='interested_related_fields'
     )

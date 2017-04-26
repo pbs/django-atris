@@ -173,6 +173,8 @@ class HistoricalRecordGenerator(object):
     def __init__(self, instance, history_type, user, ignored_users=None,
                  removed_data=None):
         self.instance = instance
+        self.previous_data = getattr(
+            self.instance.history.first(), 'data', None)
         self.history_logging = self.instance._meta.history_logging
         self.history_type = history_type
         self.user = user or getattr(instance, 'history_user', None)
@@ -202,7 +204,9 @@ class HistoricalRecordGenerator(object):
             )
             return
         data = get_instance_field_data(self.instance, self.removed_data)
-        diff_fields, should_generate_history = self.get_differing_fields(data)
+        (diff_fields,
+         excluded_diff,
+         should_generate_history) = self.get_differing_fields(data)
         if not should_generate_history:
             return
         self.instance_history = HistoricalRecord.objects.create(
@@ -214,6 +218,21 @@ class HistoricalRecordGenerator(object):
             history_diff=diff_fields,
             additional_data=self.get_additional_data()
         )
+        if self.history_type == '~':
+            changed_fields = diff_fields + excluded_diff
+        else:
+            changed_fields = data.keys()
+        for field_name in changed_fields:
+            field = self.instance._meta.get_field(field_name)
+            RelatedModel = field.related_model
+            if field.many_to_one and hasattr(RelatedModel._meta, 'history_logging'):
+                current_reference = getattr(self.instance, field_name)
+                previous_reference = RelatedModel.objects.get()
+                referenced_object_meta = referenced_object._meta
+                if referenced_object_meta:
+                    referenced_object_meta.history_logging.post_save(
+                        referenced_object, False
+                    )
         self.generate_history_for_interested_objects()
 
     def should_skip_history_for_user(self):
@@ -224,17 +243,15 @@ class HistoricalRecordGenerator(object):
 
     def get_differing_fields(self, data):
         if self.history_type == '~':
-            previous_data = getattr(
-                self.instance.history.first(), 'data', None)
-            diff_fields = get_diff_fields(
-                self.instance, data, previous_data,
+            diff_fields, excluded_diff = get_diff_fields(
+                self.instance, data, self.previous_data,
                 self.history_logging.excluded_fields_names
             )
-            should_generate_history = diff_fields is None or diff_fields
+            should_generate_history = previous_data is None or diff_fields
         else:
-            diff_fields = list()
+            diff_fields = excluded_diff = []
             should_generate_history = True
-        return diff_fields, should_generate_history
+        return diff_fields, excluded_diff, should_generate_history
 
     def get_additional_data(self):
         try:

@@ -845,6 +845,30 @@ class TestLoggingRelatedFields(TestCase):
              'co_authors': ''}
         )
 
+    def test_history_added_for_show_with_updated_season_set_when_adding_new_season(  # noqa
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        # act
+        season = Season.objects.create(
+            title='1',
+            description='Something',
+            show=show
+        )
+        # assert
+        show_history = HistoricalRecord.objects.by_model_and_model_id(
+            Show, show.pk
+        ).first()
+        self.assertEqual(
+            show_history.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': str(season.pk),
+             'specials': ''}
+        )
+
 
 class TestRelatedHistory(TestCase):
 

@@ -9,7 +9,8 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     result. If there is no previous data, 2 empty lists are returned.
     :param model: - the Django model or an instance of that model.
     """
-    diff = excluded = []
+    diff = []
+    excluded = []
     if not previous_data:
         return diff, excluded
     for f, v in data.items():

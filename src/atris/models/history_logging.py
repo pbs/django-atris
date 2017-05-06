@@ -155,7 +155,8 @@ def find_module(module_path):
 
 
 def find_field_name_by_model(owning_model_meta, model, on_reverse=None):
-    remote_relations = owning_model_meta.related_objects
+    remote_relations = (list(owning_model_meta.related_objects) +
+                        owning_model_meta.virtual_fields)
     local_relations = owning_model_meta.local_many_to_many
     if on_reverse is None:
         fields = list(remote_relations) + list(local_relations)
@@ -222,18 +223,45 @@ class HistoricalRecordGenerator(object):
             changed_fields = diff_fields + excluded_diff
         else:
             changed_fields = data.keys()
-        for field_name in changed_fields:
-            field = self.instance._meta.get_field(field_name)
-            RelatedModel = field.related_model
-            if field.many_to_one and hasattr(RelatedModel._meta, 'history_logging'):
-                current_reference = getattr(self.instance, field_name)
-                previous_reference = RelatedModel.objects.get()
-                referenced_object_meta = referenced_object._meta
-                if referenced_object_meta:
-                    referenced_object_meta.history_logging.post_save(
-                        referenced_object, False
-                    )
+        self.generate_history_for_affected_related_objects(changed_fields)
         self.generate_history_for_interested_objects()
+
+    def generate_history_for_affected_related_objects(self, changed_fields):
+        for field_name in changed_fields:
+            self._generate_history_for_for_object_in_field(field_name)
+
+    def _generate_history_for_for_object_in_field(self, field_name):
+        field = self.instance._meta.get_field(field_name)
+        if not field.many_to_one:
+            return
+        referenced_object = getattr(self.instance, field_name)
+        tracks_history = (referenced_object and
+                          hasattr(referenced_object._meta, 'history_logging'))
+        if not tracks_history:
+            return
+        history_logging = referenced_object._meta.history_logging
+        history_logging.create_historical_record(
+            referenced_object,
+            '~',
+            removed_data=self._get_removed_data_for_referenced_object(
+                referenced_object)
+        )
+
+    def _get_removed_data_for_referenced_object(self, obj):
+        if self.history_type == '-':
+            field_name = self._get_field_name_on_referenced_object(obj)
+            removed_data = {field_name: [self.instance.pk]}
+        else:
+            removed_data = {}
+        return removed_data
+
+    def _get_field_name_on_referenced_object(self, obj):
+        obj_meta = obj._meta
+        related_fields = (list(obj_meta.related_objects) +
+                          obj_meta.virtual_fields)
+        for field in related_fields:
+            if field.related_model == self.instance._meta.model:
+                return field.name
 
     def should_skip_history_for_user(self):
         ids_to_skip = self.ignored_users.get('user_ids', [])
@@ -247,7 +275,8 @@ class HistoricalRecordGenerator(object):
                 self.instance, data, self.previous_data,
                 self.history_logging.excluded_fields_names
             )
-            should_generate_history = previous_data is None or diff_fields
+            should_generate_history = bool(self.previous_data is None or
+                                           diff_fields)
         else:
             diff_fields = excluded_diff = []
             should_generate_history = True
@@ -270,6 +299,10 @@ class HistoricalRecordGenerator(object):
             for interested_object in interested_objects:
                 removed_instance = self.get_data_for_remote_relation_removal(
                     field, interested_object.pk)
+                removed_instance.update(
+                    self._get_removed_data_for_referenced_object(
+                        interested_object)
+                )
                 self.generate_history_for_interested_object(interested_object,
                                                             removed_instance)
 
@@ -280,8 +313,12 @@ class HistoricalRecordGenerator(object):
              interested_object in self.removed_data[field.name])
         )
         if is_interested_object_removed_from_instance:
+            if field.related_model:
+                related_model_meta = field.related_model._meta
+            else:
+                related_model_meta = getattr(self.instance, field.name)._meta
             remote_field_name = find_field_name_by_model(
-                field.related_model._meta, self.instance._meta.model)
+                related_model_meta, self.instance._meta.model)
             removed_instance = {remote_field_name: [self.instance.pk]}
         else:
             removed_instance = {}

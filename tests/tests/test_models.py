@@ -281,39 +281,6 @@ class TestModelsBasicFunctionality(TestCase):
             "Shouldn't be able to generate diff."
         )
 
-    def test_history_diff_is_generated_if_none(self):
-        choice = Choice.objects.create(
-            poll=self.poll,
-            choice='choice_3',
-            votes=0
-        )
-        self.assertEquals('Created Choice',
-                          choice.history.first().get_diff_to_prev_string())
-
-        choice.choice = 'choice_1'
-        choice.save()
-        # Simulate not having history_diff generated already (None)
-        choice_hist = choice.history.most_recent()
-        choice_hist.history_diff = None
-        choice_hist.save()
-
-        # Make sure it's None before rebuild
-        self.assertIsNone(
-            choice.history.most_recent().history_diff
-        )
-
-        # Should rebuild history_diff because it has prior history entries
-        self.assertEquals(
-            'Updated choice',
-            choice.history.first().get_diff_to_prev_string(),
-        )
-
-        # History diff should now be populated
-        self.assertEquals(
-            ['choice'],
-            choice.history.most_recent().history_diff
-        )
-
     def test_users_marked_for_ignore_skip_history(self):
         # Should get ignored
         poll = Poll(question='question', pub_date=now())
@@ -562,22 +529,6 @@ class TestLoggingRelatedFields(TestCase):
              'description': '',
              'links': '',
              'specials': '',
-             # The list of child seasons does not appear until a subsequent
-             # save on the show is performed. Or if the show is registered
-             # as an interested field on the season.
-             'season': ''}
-        )
-        show.save()  # A necessary extra save.
-        show_history = HistoricalRecord.objects.by_model_and_model_id(
-            Show, show.pk
-        ).first()
-        self.assertEqual(
-            show_history.data,
-            {'id': str(show.pk),
-             'title': 'Mercy Street',
-             'description': '',
-             'links': '',
-             'specials': '',
              'season': '{}, {}'.format(season_2.pk, season_1.pk)}
         )
         season_1_history = HistoricalRecord.objects.by_model_and_model_id(
@@ -589,22 +540,6 @@ class TestLoggingRelatedFields(TestCase):
              'title': '1',
              'description': 'Something',
              'show': str(show.pk),
-             # Related object recorded with ._meta.module_name if related_name
-             # not set on relation.
-             'episode': ''}
-        )
-        season_1.save()  # A necessary extra save.
-        season_1_history = HistoricalRecord.objects.by_model_and_model_id(
-            Season, season_1.pk
-        ).first()
-        self.assertEqual(
-            season_1_history.data,
-            {'id': str(season_1.pk),
-             'title': '1',
-             'description': 'Something',
-             'show': str(show.pk),
-             # Related object recorded with ._meta.module_name if related_name
-             # not set on relation.
              'episode': '{}, {}'
                         .format(one_equal_temper.pk, unknown_soldier.pk)}
         )
@@ -845,6 +780,162 @@ class TestLoggingRelatedFields(TestCase):
              'co_authors': ''}
         )
 
+    def test_history_added_for_show_with_updated_season_set_when_adding_new_season(  # noqa
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        # act
+        season = Season.objects.create(
+            title='1',
+            description='Something',
+            show=show
+        )
+        # assert
+        show_history = HistoricalRecord.objects.by_model_and_model_id(
+            Show, show.pk
+        ).first()
+        self.assertEqual(
+            show_history.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': str(season.pk),
+             'specials': ''}
+        )
+
+    def test_history_added_for_show_with_updated_season_set_when_removing_season(  # noqa
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        season_1 = Season.objects.create(
+            title='1',
+            description='Something',
+            show=show
+        )
+        season_2 = Season.objects.create(
+            title='2',
+            description='Something',
+            show=show
+        )
+        show_history = HistoricalRecord.objects.by_model_and_model_id(
+            Show, show.pk
+        ).first()
+        self.assertEqual(
+            show_history.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': '{}, {}'.format(season_2.pk, season_1.pk),
+             'specials': ''}
+        )
+        # act
+        season_2.delete()
+        # assert
+        show_history = HistoricalRecord.objects.by_model_and_model_id(
+            Show, show.pk
+        ).first()
+        self.assertEqual(
+            show_history.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': str(season_1.pk),
+             'specials': ''}
+        )
+
+    def test_history_added_for_show_with_updated_link_set_when_adding_new_link(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        link_1 = Link.objects.create(
+            name='pbs',
+            url='http://www.pbs.org/MercyStreet',
+            related_object=show
+        )
+        # act
+        link_2 = Link.objects.create(
+            name='itunes',
+            url='http://www.itunes.com/MercyStreet',
+            related_object=show
+        )
+        # assert
+        show_history_with_relate_changed = HistoricalRecord.objects.by_model_and_model_id(  # noqa
+            Show, show.pk
+        ).filter(history_diff__contains=['links']).first()
+        self.assertEqual(
+            show_history_with_relate_changed.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '{}, {}'.format(link_2.pk, link_1.pk),
+             'season': '',
+             'specials': ''}
+        )
+        show_history_for_interested = HistoricalRecord.objects.by_model_and_model_id(  # noqa
+            Show, show.pk
+        ).filter(history_diff__contains=['link']).first()
+        self.assertEqual(
+            show_history_for_interested.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '{}, {}'.format(link_2.pk, link_1.pk),
+             'season': '',
+             'specials': ''}
+        )
+
+    def test_history_added_for_show_with_updated_link_set_when_deleting_link(
+            self):
+        # arrange
+        show = Show.objects.create(title='Mercy Street', description='')
+        link = Link.objects.create(
+            name='pbs',
+            url='http://www.pbs.org/MercyStreet',
+            related_object=show
+        )
+        show_history = HistoricalRecord.objects.by_model_and_model_id(
+            Show, show.pk
+        ).first()
+        self.assertEqual(
+            show_history.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': str(link.pk),
+             'season': '',
+             'specials': ''}
+        )
+        # act
+        link.delete()
+        # assert
+        show_history_with_relate_changed = HistoricalRecord.objects.by_model_and_model_id(  # noqa
+            Show, show.pk
+        ).filter(history_diff__contains=['links']).first()
+        self.assertEqual(
+            show_history_with_relate_changed.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': '',
+             'specials': ''}
+        )
+        show_history_for_interested = HistoricalRecord.objects.by_model_and_model_id(  # noqa
+            Show, show.pk
+        ).filter(history_diff__contains=['link']).first()
+        self.assertEqual(
+            show_history_for_interested.data,
+            {'id': str(show.pk),
+             'title': 'Mercy Street',
+             'description': '',
+             'links': '',
+             'season': '',
+             'specials': ''}
+        )
+
 
 class TestRelatedHistory(TestCase):
 
@@ -876,7 +967,7 @@ class TestRelatedHistory(TestCase):
         self.assertEqual(episode_writer_history.additional_data['episode'],
                          'Created Episode')
 
-    def test_related_history_not_created_for_season_when_episode_added(self):
+    def test_related_history_created_for_season_when_episode_added(self):
         # arrange
         show = Show.objects.create(title='Mercy Street', description='')
         season = Season.objects.create(title='Season 2',
@@ -884,15 +975,16 @@ class TestRelatedHistory(TestCase):
                                        show=show)
         writer = Writer.objects.create(name='David Zabel')
         # act
-        Episode.objects.create(
+        episode = Episode.objects.create(
             title='Unknown Soldier',
             description='',
             season=season,
             author=writer
         )
         # assert
-        season_episode_history = self._history_for(Season, '~')
-        self.assertFalse(season_episode_history.exists())
+        season_episode_history = self._history_for(Season, '~').first()
+        self.assertEqual(season_episode_history.data['episode'],
+                         str(episode.pk))
         episode_history = self._history_for(Episode, '+')
         self.assertTrue(episode_history.exists())
 
@@ -1083,7 +1175,7 @@ class TestRelatedHistory(TestCase):
         self.assertEqual(episode_writer_history.additional_data['episode'],
                          'Deleted Episode')
 
-    def test_related_history_not_created_for_season_when_episode_deleted(self):
+    def test_related_history_created_for_season_when_episode_deleted(self):
         # arrange
         show = Show.objects.create(title='Mercy Street', description='')
         season = Season.objects.create(title='Season 2',
@@ -1097,8 +1189,8 @@ class TestRelatedHistory(TestCase):
         # act
         episode.delete()
         # assert
-        season_episode_history = self._history_for(Season, '~')
-        self.assertFalse(season_episode_history.exists())
+        season_episode_history = self._history_for(Season, '~').first()
+        self.assertEqual(season_episode_history.data['episode'], '')
         episode_history = self._history_for(Episode, '-')
         self.assertTrue(episode_history.exists())
 

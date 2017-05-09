@@ -5,15 +5,21 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     """
     Returns the fields of `data` for which the values differ in
     `previous_data`. The fields that are given in `excluded_fields_names` are
-    not registered as having changed.
+    not registered as having changed, but are returned in the secod list of the
+    result. If there is no previous data, 2 empty lists are returned.
     :param model: - the Django model or an instance of that model.
     """
+    diff = []
+    excluded = []
     if not previous_data:
-        return None
-    result = [model._meta.get_field(f).name
-              for f, v in data.items()
-              if f not in excluded_fields_names and previous_data.get(f) != v]
-    return result
+        return diff, excluded
+    for f, v in data.items():
+        if previous_data.get(f) != v:
+            if f in excluded_fields_names:
+                excluded.append(f)
+            else:
+                diff.append(model._meta.get_field(f).name)
+    return diff, excluded
 
 
 def get_instance_field_data(instance, removed_data={}):

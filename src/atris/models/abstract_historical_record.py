@@ -15,8 +15,6 @@ from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.timezone import now
 
-from .helpers import get_diff_fields
-
 
 str = unicode if six.PY2 else str
 

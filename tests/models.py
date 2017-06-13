@@ -79,8 +79,10 @@ class Episode(models.Model):
     author = models.OneToOneField(Writer, related_name='work')
     co_authors = models.ManyToManyField(Writer, related_name='contributions')
 
+    additional_data = {'where_from': 'System'}
     interested_related_fields = ['show', 'cast', 'author']
     history = HistoryLogging(
+        additional_data_param_name='additional_data',
         interested_related_fields='interested_related_fields'
     )
 

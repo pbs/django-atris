@@ -228,7 +228,7 @@ class HistoricalRecordGenerator(object):
 
     def generate_history_for_affected_related_objects(self, changed_fields):
         for field_name in changed_fields:
-            self._generate_history_for_for_object_in_field(field_name)
+            self._generate_history_for_object_in_field(field_name)
 
     def _generate_history_for_object_in_field(self, field_name):
         field = self.instance._meta.get_field(field_name)

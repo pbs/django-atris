@@ -13,7 +13,7 @@ from django.db.models.signals import (
 from django.utils import six
 
 from .exceptions import InvalidRelatedField
-from .helpers import get_diff_fields, get_instance_field_data
+from .helpers import get_diff_fields, get_instance_field_data, from_writable_db
 from .historical_record import get_history_model
 
 
@@ -175,7 +175,7 @@ class HistoricalRecordGenerator(object):
                  removed_data=None):
         self.instance = instance
         self.previous_data = getattr(
-            self.instance.history.first(), 'data', None)
+            from_writable_db(self.instance.history).first(), 'data', None)
         self.history_logging = self.instance._meta.history_logging
         self.history_type = history_type
         self.user = user or getattr(instance, 'history_user', None)
@@ -228,9 +228,9 @@ class HistoricalRecordGenerator(object):
 
     def generate_history_for_affected_related_objects(self, changed_fields):
         for field_name in changed_fields:
-            self._generate_history_for_for_object_in_field(field_name)
+            self._generate_history_for_object_in_field(field_name)
 
-    def _generate_history_for_for_object_in_field(self, field_name):
+    def _generate_history_for_object_in_field(self, field_name):
         field = self.instance._meta.get_field(field_name)
         if not field.many_to_one:
             return

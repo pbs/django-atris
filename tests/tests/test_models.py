@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from unittest import TestCase
 from django.utils import six
+from django.forms.models import modelform_factory
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -1352,8 +1353,92 @@ class TestHistoricalRecordQuerySet(TestCase):
         # arrange
         Poll.objects.create(question='How is the weather?', pub_date=now())
         # act
-        result = HistoricalRecord.objects.by_app_label_and_model_name(
-            Choice._meta.app_label, Choice._meta.model_name
-        )
+        result = HistoricalRecord.objects.by_model(Choice)
         # assert
         assert result.exists() is False
+
+
+class TestManyToManyHistory(TestCase):
+
+    def tearDown(self):
+        HistoricalRecord.objects.all().delete()
+
+    def test_added_link_and_co_authors_and_description_via_episode_form(self):
+        writer = Writer.objects.create(name='David Zabel')
+        writer2 = Writer.objects.create(name='Bugs Bunny')
+        writer3 = Writer.objects.create(name='Daffy Duck')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         author=writer)
+        episode.co_authors.add(writer2)
+        EpisodeForm = modelform_factory(
+            Episode, fields=['co_authors', 'description']
+        )
+        # act
+        episode_url = Link.objects.create(
+            name='PBS link',
+            url='http://pbs.org/mercy-street-ep1',
+            related_object=episode
+        )
+        episode_form = EpisodeForm({'co_authors': [writer2.pk, writer3.pk],
+                                    'description': 'New description'},
+                                   instance=episode)
+        episode2 = episode_form.save(commit=False)
+        episode2.additional_data['where_from'] = 'Console'
+        episode_form.save()
+        # assert
+        episode_history = HistoricalRecord.objects.by_model(Episode)
+        co_authors_changed = episode_history[0]
+        self.assertEqual(co_authors_changed.history_diff, ['co_authors'])
+        self.assertEqual(co_authors_changed.data['co_authors'],
+                         '{}, {}'.format(writer2.pk, writer3.pk))
+        description_changed = episode_history[1]
+        self.assertEqual(description_changed.history_diff, ['description'])
+        self.assertEqual(description_changed.data['description'],
+                         'New description')
+        link_added = episode_history[2]
+        self.assertEqual(link_added.history_diff, ['link'])
+        link_history = HistoricalRecord.objects.by_model_and_model_id(
+            Link, episode_url.pk)[0]
+        self.assertEqual(link_added.related_field_history, link_history)
+
+    def test_removed_link_and_co_authors_and_changed_description_via_episode_form(self):  # noqa
+        writer = Writer.objects.create(name='David Zabel')
+        writer2 = Writer.objects.create(name='Bugs Bunny')
+        writer3 = Writer.objects.create(name='Daffy Duck')
+        episode = Episode.objects.create(title='Unknown Soldier',
+                                         description='',
+                                         author=writer)
+        episode.co_authors.add(writer2, writer3)
+        EpisodeForm = modelform_factory(
+            Episode, fields=['co_authors', 'description']
+        )
+        episode_url = Link.objects.create(
+            name='PBS link',
+            url='http://pbs.org/mercy-street-ep1',
+            related_object=episode
+        )
+        episode_url_id = episode_url.pk
+        # act
+        episode_url.delete()
+        episode_form = EpisodeForm({'co_authors': [writer3.pk],
+                                    'description': 'New description'},
+                                   instance=episode)
+        episode2 = episode_form.save(commit=False)
+        episode2.additional_data['where_from'] = 'Console'
+        episode_form.save()
+        # assert
+        episode_history = HistoricalRecord.objects.by_model(Episode)
+        co_authors_changed = episode_history[0]
+        self.assertEqual(co_authors_changed.history_diff, ['co_authors'])
+        self.assertEqual(co_authors_changed.data['co_authors'],
+                         str(writer3.pk))
+        description_changed = episode_history[1]
+        self.assertEqual(description_changed.history_diff, ['description'])
+        self.assertEqual(description_changed.data['description'],
+                         'New description')
+        link_removed = episode_history[2]
+        self.assertEqual(link_removed.history_diff, ['link'])
+        link_history = HistoricalRecord.objects.by_model_and_model_id(
+            Link, episode_url_id)[0]
+        self.assertEqual(link_removed.related_field_history, link_history)

@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import router
 
 
 def get_diff_fields(model, data, previous_data, excluded_fields_names):
@@ -45,7 +46,7 @@ def get_instance_field_data(instance, removed_data={}):
         except ObjectDoesNotExist:
             value = None
         if field.many_to_many or field.one_to_many:
-            ids = value.values_list('pk', flat=True)
+            ids = from_writable_db(value).values_list('pk', flat=True)
             if name in removed_data:
                 ids = ([] if removed_data[name] is None
                        else ids.exclude(pk__in=removed_data[name]))
@@ -55,3 +56,14 @@ def get_instance_field_data(instance, removed_data={}):
         else:
             data[name] = str(value) if value is not None else None
     return data
+
+
+def from_writable_db(manager):
+    """
+    When using a DB router in which the reads are done through a different
+    connection than the writes, the data may differ, resulting in incorrect
+    history logging. Use the writable DB whenever it is essential to get the
+    latest data.
+    """
+    writable_db = router.db_for_write(manager.model)
+    return manager.using(writable_db)

@@ -7,9 +7,7 @@ from sys import modules
 import threading
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import (
-    post_save, pre_delete, class_prepared, m2m_changed
-)
+from django.db.models.signals import post_save, pre_delete, m2m_changed
 from django.utils import six
 
 from .exceptions import InvalidRelatedField
@@ -17,17 +15,25 @@ from .helpers import get_diff_fields, get_instance_field_data
 from .historical_record import get_history_model
 
 
-str = unicode if six.PY2 else str
+str = unicode if six.PY2 else str  # noqa
 
 registered_models = {}
-
 logger = logging.getLogger(__name__)
-
 HistoricalRecord = get_history_model()
+
+
+class HistoryManager(object):
+    def __get__(self, instance, model):
+        if instance and model:
+            return HistoricalRecord.objects.by_model_and_model_id(model,
+                                                                  instance.id)
+        if model:
+            return HistoricalRecord.objects.by_model(model)
 
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
 class HistoryLogging(object):
+
     thread = threading.local()
 
     def __init__(self, additional_data_param_name='',
@@ -54,72 +60,56 @@ class HistoryLogging(object):
         self.interested_related_fields_param_name = interested_related_fields
         self.ignore_history_for_users_param_name = ignore_history_for_users
 
-    def get_history_user_from_request(self):
-        """Get the modifying user from the middleware."""
-        try:
-            if self.thread.request.user.is_authenticated():
-                return self.thread.request.user
-        except AttributeError:
-            return
-
     def contribute_to_class(self, cls, name):
-        self.manager_name = name
-        self.module = cls.__module__
-        self.model = cls
-        class_prepared.connect(self.finalize, sender=cls)
-
-    def finalize(self, sender, **kwargs):
-        if sender not in registered_models:
-            registered_models[sender] = {
+        if cls not in registered_models:
+            registered_models[cls] = {
                 'additional_data_param_name': self.additional_data_param_name,
                 'excluded_fields_param_name': self.excluded_fields_param_name
             }
-        # The HistoricalRecord object will be discarded,
-        # so the signal handlers can't use weak references.
-        post_save.connect(self.post_save, sender=sender, weak=False)
-        pre_delete.connect(self.pre_delete, sender=sender, weak=False)
-        self._set_m2m_changed_signal_receiver(sender)
+        setattr(cls._meta, 'history_logging', self)
+        setattr(cls, name, HistoryManager())
+        self.module = cls.__module__
+        self.model = cls
         self.excluded_fields_names = getattr(
-            sender, self.excluded_fields_param_name, [])
-        self._set_interested_related_fields(sender)
-        setattr(sender._meta, 'history_logging', self)
-        setattr(sender, self.manager_name, HistoryManager())
+            cls, self.excluded_fields_param_name, [])
+        self._set_interested_related_fields(cls)
 
-    def _set_m2m_changed_signal_receiver(self, sender):
-        for field in sender._meta.local_many_to_many:
-            m2m_changed.connect(self.m2m_changed,
-                                sender=get_through_class(sender, field),
-                                weak=False)
-
-    def _set_interested_related_fields(self, sender):
+    def _set_interested_related_fields(self, cls):
         self.interested_related_fields = set()
         interested_related_fields_name = getattr(
-            sender, self.interested_related_fields_param_name, [])
+            cls, self.interested_related_fields_param_name, [])
         for field_name in interested_related_fields_name:
-            field = sender._meta.get_field(field_name)
+            field = cls._meta.get_field(field_name)
             if field.is_relation:
                 self.interested_related_fields.add(field)
             else:
                 raise InvalidRelatedField('{} is not a related field on {}'
-                                          .format(field.name, sender))
+                                          .format(field.name, cls))
 
-    def post_save(self, instance, created, **kwargs):
-        if not kwargs.get('raw', False):
-            self.create_historical_record(instance, created and '+' or '~')
+    def register_signal_handlers(self, sender):
+        post_save.connect(self.post_save, sender=sender, weak=False)
+        pre_delete.connect(self.pre_delete, sender=sender, weak=False)
+        through_classes = get_m2m_through_classes(sender)
+        for through_class in through_classes:
+            m2m_changed.connect(self.m2m_changed, sender=through_class)
+
+    def post_save(self, instance, created=True, raw=False, **kwargs):
+        if not raw:
+            self._create_historical_record(instance, created and '+' or '~')
 
     def pre_delete(self, instance, **kwargs):
-        self.create_historical_record(instance, '-')
+        self._create_historical_record(instance, '-')
 
     def m2m_changed(self, instance, action, reverse, model, pk_set, **kwargs):
         if action == 'post_add':
-            self.create_historical_record(instance, '~')
+            self._create_historical_record(instance, '~')
         elif action in ('pre_remove', 'pre_clear'):
             field_name = find_field_name_by_model(
                 instance._meta, model, reverse)
-            self.create_historical_record(instance, '~', {field_name: pk_set})
+            self._create_historical_record(instance, '~', {field_name: pk_set})
 
-    def create_historical_record(self, instance, history_type,
-                                 removed_data=None):
+    def _create_historical_record(self, instance, history_type,
+                                  removed_data=None):
         ignored_users = getattr(
             instance, self.ignore_history_for_users_param_name, {})
         generate_history = HistoricalRecordGenerator(
@@ -131,19 +121,35 @@ class HistoryLogging(object):
         )
         generate_history()
 
+    def get_history_user_from_request(self):
+        """Get the modifying user from the middleware."""
+        try:
+            if self.thread.request.user.is_authenticated():
+                return self.thread.request.user
+        except AttributeError:
+            return
 
-def is_str(obj):
-    return isinstance(obj, str if six.PY3 else basestring)
+
+def get_m2m_through_classes(sender):
+    m2m_related_throughs = [get_through_class(sender, ro.through)
+                            for ro in sender._meta.related_objects
+                            if ro.many_to_many]
+    m2m_throughs = [get_through_class(sender, f.remote_field.through)
+                    for f in sender._meta.local_many_to_many]
+    return m2m_related_throughs + m2m_throughs
 
 
-def get_through_class(model, field):
-    through = field.remote_field.through
+def get_through_class(model, through):
     if is_str(through):
         module_class = through.rsplit('.', 1)
         class_ = module_class.pop()
         module_path = module_class[0] if module_class else model.__module__
         through = getattr(find_module(module_path), class_)
     return through
+
+
+def is_str(obj):
+    return isinstance(obj, str if six.PY3 else basestring)  # noqa
 
 
 def find_module(module_path):
@@ -309,12 +315,3 @@ class HistoricalRecordGenerator(object):
             additional_data=additional_data,
             related_field_history=self.instance_history
         )
-
-
-class HistoryManager(object):
-    def __get__(self, instance, model):
-        if instance and model:
-            return HistoricalRecord.objects.by_model_and_model_id(model,
-                                                                  instance.id)
-        if model:
-            return HistoricalRecord.objects.by_model(model)

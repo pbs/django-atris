@@ -20,18 +20,23 @@ str = unicode if six.PY2 else str
 
 class TestModelsBasicFunctionality(TestCase):
 
-    def setUp(cls):
-        HistoricalRecord.objects.all().delete()
-        cls.poll = Poll.objects.create(question='question', pub_date=now())
-        cls.choice = Choice.objects.create(
-            poll=cls.poll,
+    def setUp(self):
+        self.poll = Poll.objects.create(question='question', pub_date=now())
+        self.choice = Choice.objects.create(
+            poll=self.poll,
             choice='choice_1',
             votes=0
         )
-        cls.voter = Voter.objects.create(
-            choice=cls.choice,
+        self.voter = Voter.objects.create(
+            choice=self.choice,
             name='voter_1'
         )
+
+    def tearDown(self):
+        HistoricalRecord.objects.all().delete()
+        Choice.objects.all().delete()
+        Poll.objects.all().delete()
+        Voter.objects.all().delete()
 
     def test_history_create_for_tracked_models(self):
         self.assertEquals(self.choice.id,

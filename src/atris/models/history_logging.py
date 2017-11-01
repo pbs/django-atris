@@ -70,11 +70,12 @@ class HistoryLogging(object):
         setattr(cls, name, HistoryManager())
         self.module = cls.__module__
         self.model = cls
+
+    def set_excluded_fields_names(self, cls):
         self.excluded_fields_names = getattr(
             cls, self.excluded_fields_param_name, [])
-        self._set_interested_related_fields(cls)
 
-    def _set_interested_related_fields(self, cls):
+    def set_interested_related_fields(self, cls):
         self.interested_related_fields = set()
         interested_related_fields_name = getattr(
             cls, self.interested_related_fields_param_name, [])

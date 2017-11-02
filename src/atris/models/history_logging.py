@@ -131,6 +131,10 @@ class HistoryLogging(object):
             return
 
 
+def fake_save(obj):
+    obj._meta.history_logging.post_save(obj, created=False)
+
+
 def get_m2m_through_classes(sender):
     m2m_related_throughs = [get_through_class(sender, ro.through)
                             for ro in sender._meta.related_objects

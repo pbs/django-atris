@@ -5,7 +5,7 @@ from django.utils.timezone import now
 
 from pytest import fixture
 
-from tests.models import Poll, Choice, Voter
+from tests.models import Poll, Choice, Voter, Show, Writer, Episode
 
 
 @fixture
@@ -21,3 +21,22 @@ def choice(poll):
 @fixture
 def voter(choice):
     return Voter.objects.create(choice=choice, name='voter_1')
+
+
+@fixture
+def show():
+    return Show.objects.create(title='Mercy Street', description='')
+
+
+@fixture
+def writer():
+    return Writer.objects.create(name='David Zabel')
+
+
+@fixture
+def episode(show, writer):
+    episode = Episode.objects.create(title='Unknown Soldier',
+                                     description='',
+                                     show=show,
+                                     author=writer)
+    return episode

@@ -1,25 +1,9 @@
-from pytest import fixture, mark
+from pytest import mark
 
-from tests.models import Show, Season, Actor, Writer, Episode, Link
-
-
-@fixture
-def show():
-    return Show.objects.create(title='Mercy Street', description='')
+from tests.models import Show, Season, Actor, Writer, Link
 
 
-@fixture
-def writer():
-    return Writer.objects.create(name='David Zabel')
-
-
-@fixture
-def episode(show, writer):
-    episode = Episode.objects.create(title='Unknown Soldier',
-                                     description='',
-                                     show=show,
-                                     author=writer)
-    return episode
+# TODO: Add tests for Issue#15
 
 
 @mark.django_db

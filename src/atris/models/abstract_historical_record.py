@@ -18,7 +18,7 @@ from django.utils.timezone import now
 from .helpers import get_diff_fields
 
 
-str = unicode if six.PY2 else str
+str = unicode if six.PY2 else str  # noqa
 
 
 logger = logging.getLogger(__name__)

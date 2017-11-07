@@ -1,6 +1,6 @@
 from pytest import mark
 
-from tests.models import Show, Season, Actor, Writer, Link
+from tests.models import Show, Actor, Writer, Link
 
 
 # TODO: Add tests for Issue#15
@@ -21,19 +21,14 @@ def test_related_object_recorded_with_module_name_if_no_related_name_specified(
 
 @mark.skip(reason='Issue#18')
 @mark.django_db
-def test_changes_to_many_to_one_relations_recorded_automatically(show,
-                                                                 episode):
+def test_changes_to_many_to_one_relations_recorded_automatically(
+        show, episode, season):
     # arrange
-    season_1 = Season.objects.create(
-        title='1',
-        description='Something',
-        show=show
-    )
     # assert
     season_added, special_added = show.history.all()[:2]
     assert season_added.history_type == '~'
     assert season_added.history_diff == ['season']
-    assert season_added.data['season'] == str(season_1.pk)
+    assert season_added.data['season'] == str(season.pk)
     assert special_added.history_type == '~'
     assert special_added.history_diff == ['specials']
     assert special_added.data['specials'] == str(episode.pk)
@@ -42,22 +37,17 @@ def test_changes_to_many_to_one_relations_recorded_automatically(show,
 @mark.skip(reason='Issue#18')
 @mark.django_db
 def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa
-        show):
+        show, season):
     # arrange
-    season_1 = Season.objects.create(
-        title='1',
-        description='Something',
-        show=show
-    )
     show2 = Show.objects.create(title='Mercy Street', description='')
     # act
-    season_1.show = show2
-    season_1.save()
+    season.show = show2
+    season.save()
     # assert
     season_added = show2.history.first()
     assert season_added.history_type == '~'
     assert season_added.history_diff == ['season']
-    assert season_added.data['season'] == str(season_1.pk)
+    assert season_added.data['season'] == str(season.pk)
     season_removed = show.history.first()
     assert season_removed.history_type == '~'
     assert season_removed.history_diff == ['season']
@@ -96,23 +86,23 @@ def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(
         related_object=episode
     )
     # assert
-    episode_history = episode.history.first()
+    special_history = episode.history.first()
     expected_keys = {'id', 'title', 'description', 'show', 'season', 'cast',
                      'author', 'co_authors'}  # no relation to Link
-    assert set(episode_history.data.keys()) == expected_keys
+    assert set(special_history.data.keys()) == expected_keys
 
 
 @mark.django_db
 def test_one_to_one_relations_tracked_on_both_models(writer, episode):
     # assert
-    episode_added_for_writer = writer.history.first()
-    assert episode_added_for_writer.history_type == '~'
+    special_added_for_writer = writer.history.first()
+    assert special_added_for_writer.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added_for_writer.history_diff == ['work']
-    assert episode_added_for_writer.data['work'] == str(episode.pk)
-    episode_created = episode.history.first()
-    assert episode_created.history_type == '+'
-    assert episode_created.data['author'] == str(writer.pk)
+    # assert special_added_for_writer.history_diff == ['work']
+    assert special_added_for_writer.data['work'] == str(episode.pk)
+    special_created = episode.history.first()
+    assert special_created.history_type == '+'
+    assert special_created.data['author'] == str(writer.pk)
 
 
 @mark.django_db
@@ -126,16 +116,16 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == '{}, {}'.format(actor1.pk, actor2.pk)
-    episode_added = actor1.history.first()
-    assert episode_added.history_type == '~'
+    special_added = actor1.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == str(episode.pk)
-    episode_added = actor2.history.first()
-    assert episode_added.history_type == '~'
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == str(episode.pk)
+    special_added = actor2.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == str(episode.pk)
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == str(episode.pk)
 
 
 @mark.django_db
@@ -152,11 +142,11 @@ def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == str(actor2.pk)
     assert actor1.history.count() == 3
-    episode_added = actor1.history.first()
-    assert episode_added.history_type == '~'
+    special_added = actor1.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == ''
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == ''
 
 
 @mark.django_db
@@ -171,11 +161,11 @@ def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_object
     assert episode.history.count() == 3
     assert actor1.history.count() == 3
     assert actor2.history.count() == 3
-    episode_added = actor2.history.first()
-    assert episode_added.history_type == '~'
+    special_added = actor2.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == str(episode.pk)
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == str(episode.pk)
 
 
 @mark.django_db
@@ -192,17 +182,17 @@ def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == ''
     assert actor1.history.count() == 3
-    episode_added = actor1.history.first()
-    assert episode_added.history_type == '~'
+    special_added = actor1.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == ''
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == ''
     assert actor2.history.count() == 3
-    episode_added = actor2.history.first()
-    assert episode_added.history_type == '~'
+    special_added = actor2.history.first()
+    assert special_added.history_type == '~'
     # TODO: uncomment after Issue#18 is fixed
-    # assert episode_added.history_diff == ['filmography']
-    assert episode_added.data['filmography'] == ''
+    # assert special_added.history_diff == ['filmography']
+    assert special_added.data['filmography'] == ''
 
 
 @mark.django_db

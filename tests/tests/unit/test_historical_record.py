@@ -1,177 +1,211 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from datetime import datetime
+
+from django.contrib.contenttypes.models import ContentType
+
+from pytest import fixture
+
+from atris.models import HistoricalRecord
+
+from tests.models import Poll, Choice
 
 
-@mark.django_db
-def test_diff_string_for_no_previous_history_and_not_created(setup):
-    poll, choice, voter = setup
-    created_snapshot = self.choice.history.first()
-    self.assertEquals('Created Choice',
-                      created_snapshot.get_diff_to_prev_string())
+@fixture
+def poll_content_type():
+    return ContentType.objects.get_for_model(Poll)
 
 
-@mark.django_db
-def test_diff_string_works_properly_with_lost_history(setup):
-    poll, choice, voter = setup
-    """
-    Since old history deletion is a thing, the situation arises that
-    history that once had a previous state no longer does and the snapshot
-    isn't a "creation" snapshot. In this case, the diff string can't know
-    what the difference to the previous state is, so it would return
-    'No prior information available.'.
+@fixture
+def choice_content_type():
+    return ContentType.objects.get_for_model(Choice)
 
-    """
-    choice = Choice.objects.create(
-        poll=self.poll,
-        choice='choice_3',
-        votes=0
+
+@fixture
+def history_setup(poll_content_type, choice_content_type):
+    hr1 = HistoricalRecord.objects.create(
+        content_type=poll_content_type,
+        object_id=3,
+        history_type='~',
+        data={}
     )
-    self.assertEquals('Created Choice',
-                      choice.history.first().get_diff_to_prev_string())
-
-    # Delete the history
-    choice.history.delete()
-
-    # Update with no prior history information available
-    choice.choice = 'choice_1'
-    choice.save()
-
-    self.assertEquals(
-        'No prior information available.',
-        choice.history.first().get_diff_to_prev_string(),
-        'Should not have the info required to build the history diff.'
+    hr2 = HistoricalRecord.objects.create(
+        content_type=choice_content_type,
+        object_id=33,
+        history_type='-',
+        data={}
     )
-
-    # Check for entries that have no pre-populated history
-    hist = choice.history.most_recent()
-    hist.history_diff = None
-    hist.save()
-
-    self.assertEquals(
-        'No prior information available.',
-        choice.history.first().get_diff_to_prev_string(),
-        "Shouldn't be able to generate diff."
+    hr3 = HistoricalRecord.objects.create(
+        content_type=choice_content_type,
+        object_id=14,
+        history_type='+',
+        data={}
     )
-
-
-@mark.django_db
-def test_history_diff_is_generated_if_none(setup):
-    poll, choice, voter = setup
-    choice = Choice.objects.create(
-        poll=self.poll,
-        choice='choice_3',
-        votes=0
+    hr4 = HistoricalRecord.objects.create(
+        content_type=poll_content_type,
+        object_id=3,
+        history_type='~',
+        data={}
     )
-    self.assertEquals('Created Choice',
-                      choice.history.first().get_diff_to_prev_string())
-
-    choice.choice = 'choice_1'
-    choice.save()
-    # Simulate not having history_diff generated already (None)
-    choice_hist = choice.history.most_recent()
-    choice_hist.history_diff = None
-    choice_hist.save()
-
-    # Make sure it's None before rebuild
-    self.assertIsNone(
-        choice.history.most_recent().history_diff
+    hr5 = HistoricalRecord.objects.create(
+        content_type=poll_content_type,
+        object_id=3,
+        history_type='-',
+        data={}
     )
-
-    # Should rebuild history_diff because it has prior history entries
-    self.assertEquals(
-        'Updated choice',
-        choice.history.first().get_diff_to_prev_string(),
+    hr6 = HistoricalRecord.objects.create(
+        content_type=choice_content_type,
+        object_id=14,
+        history_type='~',
+        data={}
     )
-
-    # History diff should now be populated
-    self.assertEquals(
-        ['choice'],
-        choice.history.most_recent().history_diff
-    )
+    return [hr1, hr2, hr3, hr4, hr5, hr6]
 
 
-class TestHistoryLoggingOrdering(TestCase):
+class TestDiffString:
 
-    def test_global_history_is_ordered_by_history_date(self):
-        # clear the history state prior to test starting
-        HistoricalRecord.objects.all().delete()
-        polls = []
-        choices = []
-        for i in range(10):
-            poll = Poll.objects.create(question='question_{}'.format(i),
-                                       pub_date=now())
-            choice = Choice.objects.create(poll=poll,
-                                           choice='choice_{}'.format(i),
-                                           votes=0)
-            polls.append(poll)
-            choices.append(choice)
-
-        self.assertEquals(len(polls + choices),
-                          HistoricalRecord.objects.all().count())
-
-        for i in range(10):
-            polls[i].question += '_updated'
-            polls[i].save()
-            choices[i].choice += '_updated'
-            choices[i].save()
-
-        self.assertEquals(
-            len(polls + choices) * 2,  # take updates into account
-            HistoricalRecord.objects.all().count()
+    def test_diff_string_for_create(self, db, poll_content_type):
+        # arrange
+        create_history = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='+',
+            history_diff=[],
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': str(datetime.now())}
         )
+        # act
+        result = create_history.get_diff_to_prev_string()
+        # assert
+        assert result == 'Created poll'
 
-        oldest_twenty_history_entries = HistoricalRecord.objects.all()[20:]
-        for entry in oldest_twenty_history_entries:
-            self.assertEquals('+', entry.history_type)
-
-        newest_twenty_history_entries = HistoricalRecord.objects.all()[:20]
-        for entry in newest_twenty_history_entries:
-            self.assertEquals('~', entry.history_type)
-
-    def test_model_history_is_ordered_by_history_date(self):
-        # clear the history state prior to test starting
-        HistoricalRecord.objects.all().delete()
-        polls = []
-        choices = []
-        for i in range(10):
-            poll = Poll.objects.create(question='question_{}'.format(i),
-                                       pub_date=now())
-            choice = Choice.objects.create(poll=poll,
-                                           choice='choice_{}'.format(i),
-                                           votes=0)
-            polls.append(poll)
-            choices.append(choice)
-
-        self.assertEquals(len(polls + choices),
-                          HistoricalRecord.objects.all().count())
-
-        for i in range(10):
-            polls[i].question += '_updated'
-            polls[i].save()
-            choices[i].choice += '_updated'
-            choices[i].save()
-
-        self.assertEquals(
-            len(polls + choices) * 2,  # take updates into account
-            HistoricalRecord.objects.all().count()
+    def test_diff_string_for_delete(self, db, poll_content_type):
+        # arrange
+        create_history = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='-',
+            history_diff=[],
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': str(datetime.now())}
         )
+        # act
+        result = create_history.get_diff_to_prev_string()
+        # assert
+        assert result == 'Deleted poll'
 
-        oldest_ten_model_history_entries = Poll.history.all()[10:]
+    def test_diff_string_for_update_with_one_field_updated(self, db,
+                                                           poll_content_type):
+        # arrange
+        update_history = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='~',
+            history_diff=['question'],
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': str(datetime.now())}
+        )
+        # act
+        result = update_history.get_diff_to_prev_string()
+        # assert
+        assert result == 'Updated question'
 
-        for entry in oldest_ten_model_history_entries:
-            self.assertEquals('+', entry.history_type)
+    def test_diff_string_for_update_with_more_fields_updated(
+            self, db, poll_content_type):
+        # arrange
+        update_history = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='~',
+            history_diff=['question', 'pub_date'],
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': str(datetime.now())}
+        )
+        # act
+        result = update_history.get_diff_to_prev_string()
+        # assert
+        assert result == 'Updated date published, question'
 
-        newest_ten_model_history_entries = Poll.history.all()[:10]
-        for entry in newest_ten_model_history_entries:
-            self.assertEquals('~', entry.history_type)
+    def test_diff_string_works_properly_with_lost_history(self, db,
+                                                          poll_content_type):
+        """
+        Since old history deletion is a thing, the situation arises that
+        history that once had a previous state no longer does and the snapshot
+        isn't a "creation" snapshot. In this case, the diff string can't know
+        what the difference to the previous state is, so it would return
+        'No prior information available.'.
 
-        self.assertEquals('+', Choice.history.last().history_type)
-        self.assertEquals('~', Choice.history.first().history_type)
+        """
+        # arrange
+        update_without_previous = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='~',
+            history_diff=None,
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': str(datetime.now())}
+        )
+        # act
+        result = update_without_previous.get_diff_to_prev_string()
+        # assert
+        failure_message = ('Should not have the info required to build the '
+                           'history diff.')
+        assert result == 'No prior information available.', failure_message
 
-    def test_model_instance_history_is_ordered_by_history_date(self):
-        poll = Poll.objects.create(question='question',
-                                   pub_date=now())
+    def test_history_diff_is_generated_if_none(self, db, poll_content_type):
+        # arrange
+        pub_date = str(datetime.now())
+        HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='+',
+            history_diff=[],
+            data={'id': '1',
+                  'question': 'What?',
+                  'pub_date': pub_date}
+        )
+        diffless_update = HistoricalRecord.objects.create(
+            content_type=poll_content_type,
+            object_id=1,
+            history_type='~',
+            history_diff=None,
+            data={'id': '1',
+                  'question': 'Test',
+                  'pub_date': pub_date}
+        )
+        # act
+        result = diffless_update.get_diff_to_prev_string()
+        # assert
+        assert result == 'Updated question'
+        assert diffless_update.history_diff == ['question']
 
-        poll.question += '_updated'
-        poll.save()
 
-        self.assertEquals('+', poll.history.last().history_type)
-        self.assertEquals('~', poll.history.first().history_type)
+class TestHistoryLoggingOrdering():
+
+    def test_global_history_is_ordered_by_history_date(
+            self, db, history_setup):
+        expected = list(reversed(history_setup))
+        assert list(HistoricalRecord.objects.all()) == expected
+
+    def test_model_history_is_ordered_by_history_date(self, db, history_setup):
+        expected_poll_history = [
+            history_setup[4], history_setup[3], history_setup[0]
+        ]
+        assert list(Poll.history.all()) == expected_poll_history
+        expected_choice_history = [
+            history_setup[5], history_setup[2], history_setup[1]
+        ]
+        assert list(Choice.history.all()) == expected_choice_history
+
+    def test_model_instance_history_is_ordered_by_history_date(
+            self, db, history_setup):
+        poll = Poll(id=1, question='Test', pub_date=datetime.now())
+        choice = Choice(id=14, poll=poll, choice='a', votes=0)
+        expected_choice_history = [history_setup[5], history_setup[2]]
+        assert list(choice.history.all()) == expected_choice_history

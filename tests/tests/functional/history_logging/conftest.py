@@ -5,7 +5,7 @@ from django.utils.timezone import now
 
 from pytest import fixture
 
-from tests.models import Poll, Choice, Voter, Show, Writer, Episode
+from tests.models import Poll, Choice, Voter, Show, Writer, Episode, Season
 
 
 @fixture
@@ -40,3 +40,8 @@ def episode(show, writer):
                                      show=show,
                                      author=writer)
     return episode
+
+
+@fixture
+def season(show):
+    return Season.objects.create(title='1', description='Something', show=show)

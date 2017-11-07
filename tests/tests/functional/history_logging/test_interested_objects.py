@@ -3,10 +3,10 @@ from __future__ import print_function
 
 from pytest import mark
 
-from tests.models import Actor, Episode, Link
+from tests.models import Actor, Episode, Link, Show
 
 
-# TODO: Tests for Issue#11 and Issue#16
+# TODO: Tests for Issue#11
 
 
 @mark.django_db
@@ -282,3 +282,145 @@ def test_related_history_not_created_for_objects_not_added_in_interested_fields(
     # assert
     assert season.history.count() == 1
     assert Episode.history.filter(object_id=episode_id).count() == 3
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_history_generated_for_previous_interested_object_when_removed_from_observed_object(  # noqa
+        show, episode):
+    # arrange
+    next_show = Show.objects.create(title='Another', description='Another')
+    # act
+    episode.show = next_show
+    episode.save()
+    # assert
+    show_updated = show.history.first()
+    assert show_updated.history_type == '~'
+    assert show_updated.history_diff == ['episode']
+    assert show_updated.additional_data['episode'] == 'Removed Episode'
+    assert show_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_observed_object_removal_will_override_regular_update_message(
+        show, episode):
+    # arrange
+    next_show = Show.objects.create(title='Another', description='Another')
+    # act
+    episode.show = next_show
+    episode.title = 'Another title'
+    episode.save()
+    # assert
+    show_updated = show.history.first()
+    assert show_updated.history_type == '~'
+    assert show_updated.history_diff == ['episode']
+    assert show_updated.additional_data['episode'] == 'Removed Episode'
+    assert show_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_history_generated_for_new_interested_object_when_set_on_existing_episode(  # noqa
+        show, episode):
+    # arrange
+    next_show = Show.objects.create(title='Another', description='Another')
+    # act
+    episode.show = next_show
+    episode.save()
+    # assert
+    next_show_updated = next_show.history.first()
+    assert next_show_updated.history_type == '~'
+    assert next_show_updated.history_diff == ['episode']
+    assert next_show_updated.additional_data['episode'] == 'Added Episode'
+    assert next_show_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_moving_observed_object_to_another_interested_object_will_override_regular_update_message(  # noqa
+        show, episode):
+    # arrange
+    next_show = Show.objects.create(title='Another', description='Another')
+    # act
+    episode.show = next_show
+    episode.title = 'Another title'
+    episode.save()
+    # assert
+    next_show_updated = next_show.history.first()
+    assert next_show_updated.history_type == '~'
+    assert next_show_updated.history_diff == ['episode']
+    assert next_show_updated.additional_data['episode'] == 'Added Episode'
+    assert next_show_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_history_generated_for_interested_m2m_object_when_observed_object_removed(  # noqa
+        show, episode):
+    # arrange
+    actor1 = Actor.objects.create(name='McKinley Belcher III')
+    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    episode.cast.add(actor1, actor2)
+    # act
+    episode.cast.remove(actor1)
+    # assert
+    actor1_updated = actor1.history.first()
+    assert actor1_updated.history_type == '~'
+    assert actor1_updated.history_diff == ['episode']
+    assert actor1_updated.additional_data['episode'] == 'Removed Episode'
+    assert actor1_updated.related_field_history == episode.history.first()
+    actor2_updated = actor2.history.first()
+    assert actor2_updated.history_type == '~'
+    assert actor2_updated.history_diff == ['episode']
+    assert actor2_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor2_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_history_generated_for_interested_m2m_object_when_observed_object_added(  # noqa
+        show, episode):
+    # arrange
+    actor1 = Actor.objects.create(name='McKinley Belcher III')
+    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    episode.cast.add(actor1)
+    # act
+    episode.cast.add(actor2)
+    # assert
+    actor1_updated = actor1.history.first()
+    assert actor1_updated.history_type == '~'
+    assert actor1_updated.history_diff == ['episode']
+    assert actor1_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor1_updated.related_field_history == episode.history.first()
+    actor2_updated = actor2.history.first()
+    assert actor2_updated.history_type == '~'
+    assert actor2_updated.history_diff == ['episode']
+    assert actor2_updated.additional_data['episode'] == 'Added Episode'
+    assert actor2_updated.related_field_history == episode.history.first()
+
+
+@mark.skip(reason='Issue#16')
+@mark.django_db
+def test_history_generated_for_interested_object_referenced_by_generic_field(
+        show):
+    # act
+    show_url = Link.objects.create(
+        name='PBS link',
+        url='http://pbs.org/mercy-street',
+        related_object=show
+    )
+    next_show = Show.objects.create(title='Another', description='Another')
+    show_url.related_object = next_show
+    show_url.save()
+    # assert
+    show_updated = show.history.first()
+    assert show_updated.history_type == '~'
+    assert show_updated.history_diff == ['link']
+    assert show_updated.additional_data['link'] == 'Removed Link'
+    assert show_updated.related_field_history == show_url.history.first()
+    next_show_updated = next_show.history.first()
+    assert next_show_updated.history_type == '~'
+    assert next_show_updated.history_diff == ['link']
+    assert next_show_updated.additional_data['link'] == 'Added Link'
+    assert next_show_updated.related_field_history == show_url.history.first()

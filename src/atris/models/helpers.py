@@ -16,11 +16,10 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     return result
 
 
-def get_instance_field_data(instance, removed_data={}):
+def get_instance_field_data(instance):
     """
     Returns a dictionary with the attribute values of instance, serialized as
-    strings. `removed_data` is a dictionary of field name to IDs list for the
-    objects that are to be removed from the many-to-many fields.
+    strings.
     """
     data = {}
     instance_meta = instance._meta
@@ -40,9 +39,6 @@ def get_instance_field_data(instance, removed_data={}):
             value = None
         if field.many_to_many or field.one_to_many:
             ids = value.values_list('pk', flat=True)
-            if name in removed_data:
-                ids = ([] if removed_data[name] is None
-                       else ids.exclude(pk__in=removed_data[name]))
             data[name] = ', '.join([str(e) for e in ids])
         elif field.one_to_one and not field.concrete:
             data[name] = str(value.pk) if value is not None else None

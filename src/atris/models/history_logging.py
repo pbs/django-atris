@@ -7,7 +7,7 @@ from sys import modules
 import threading
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import post_save, pre_delete, m2m_changed
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.utils import six
 
 from .exceptions import InvalidRelatedField
@@ -89,7 +89,7 @@ class HistoryLogging(object):
 
     def register_signal_handlers(self, sender):
         post_save.connect(self.post_save, sender=sender, weak=False)
-        pre_delete.connect(self.pre_delete, sender=sender, weak=False)
+        post_delete.connect(self.post_delete, sender=sender, weak=False)
         through_classes = get_m2m_through_classes(sender)
         for through_class in through_classes:
             m2m_changed.connect(self.m2m_changed, sender=through_class)
@@ -98,29 +98,23 @@ class HistoryLogging(object):
         if not raw:
             self._create_historical_record(instance, created and '+' or '~')
 
-    def pre_delete(self, instance, **kwargs):
+    def post_delete(self, instance, **kwargs):
         self._create_historical_record(instance, '-')
 
     def m2m_changed(self, instance, action, reverse, model, pk_set, **kwargs):
         if not hasattr(instance._meta, 'history_logging'):
             return
-        if action == 'post_add':
+        if action.startswith('post'):
             self._create_historical_record(instance, '~')
-        elif action in ('pre_remove', 'pre_clear'):
-            field_name = find_field_name_by_model(
-                instance._meta, model, reverse)
-            self._create_historical_record(instance, '~', {field_name: pk_set})
 
-    def _create_historical_record(self, instance, history_type,
-                                  removed_data=None):
+    def _create_historical_record(self, instance, history_type):
         ignored_users = getattr(
             instance, self.ignore_history_for_users_param_name, {})
         generate_history = HistoricalRecordGenerator(
             instance,
             history_type,
             self.get_history_user_from_request(),
-            ignored_users,
-            removed_data
+            ignored_users
         )
         generate_history()
 
@@ -183,15 +177,14 @@ def find_field_name_by_model(owning_model_meta, model, on_reverse=None):
 
 class HistoricalRecordGenerator(object):
 
-    def __init__(self, instance, history_type, user, ignored_users=None,
-                 removed_data=None):
+    def __init__(self, instance, history_type, user, ignored_users=None):
         self.instance = instance
         self.history_logging = self.instance._meta.history_logging
         self.history_type = history_type
+        self.previous_data = getattr(instance.history.first(), 'data', None)
         self.user = user or getattr(instance, 'history_user', None)
         self.ignored_users = ignored_users if ignored_users else {}
         self.history_user, self.history_user_id = self.get_user_info(self.user)
-        self.removed_data = removed_data if removed_data else {}
 
     @staticmethod
     def get_user_info(user):
@@ -214,7 +207,7 @@ class HistoricalRecordGenerator(object):
                 "'{}'".format(self.history_user, self.history_user_id)
             )
             return
-        data = get_instance_field_data(self.instance, self.removed_data)
+        data = get_instance_field_data(self.instance)
         diff_fields, should_generate_history = self.get_differing_fields(data)
         if not should_generate_history:
             return
@@ -227,7 +220,7 @@ class HistoricalRecordGenerator(object):
             history_diff=diff_fields,
             additional_data=self.get_additional_data()
         )
-        self.generate_history_for_interested_objects()
+        self.generate_history_for_interested_objects(diff_fields)
 
     def should_skip_history_for_user(self):
         ids_to_skip = self.ignored_users.get('user_ids', [])
@@ -237,10 +230,8 @@ class HistoricalRecordGenerator(object):
 
     def get_differing_fields(self, data):
         if self.history_type == '~':
-            previous_data = getattr(
-                self.instance.history.first(), 'data', None)
             diff_fields = get_diff_fields(
-                self.instance, data, previous_data,
+                self.instance, data, self.previous_data,
                 self.history_logging.excluded_fields_names
             )
             should_generate_history = diff_fields is None or diff_fields
@@ -260,30 +251,16 @@ class HistoricalRecordGenerator(object):
                       for key, value in additional_data.items()}
         return result
 
-    def generate_history_for_interested_objects(self):
+    def generate_history_for_interested_objects(self, diff_fields):
         for field in self.history_logging.interested_related_fields:
-            interested_objects = self.get_interested_objects(field)
+            interested_objects = self.get_interested_objects(
+                field,
+                field.name in diff_fields or self.history_type == '-'
+            )
             for interested_object in interested_objects:
-                removed_instance = self.get_data_for_remote_relation_removal(
-                    field, interested_object.pk)
-                self.generate_history_for_interested_object(interested_object,
-                                                            removed_instance)
+                self.generate_history_for_interested_object(interested_object)
 
-    def get_data_for_remote_relation_removal(self, field, interested_object):
-        is_interested_object_removed_from_instance = (
-            field.name in self.removed_data and
-            (self.removed_data[field.name] is None or
-             interested_object in self.removed_data[field.name])
-        )
-        if is_interested_object_removed_from_instance:
-            remote_field_name = find_field_name_by_model(
-                field.related_model._meta, self.instance._meta.model)
-            removed_instance = {remote_field_name: [self.instance.pk]}
-        else:
-            removed_instance = {}
-        return removed_instance
-
-    def get_interested_objects(self, field):
+    def get_interested_objects(self, field, has_changed):
         try:
             referenced_object = self.instance.__getattribute__(field.name)
         except ObjectDoesNotExist:
@@ -300,24 +277,31 @@ class HistoricalRecordGenerator(object):
                 'be one of: 1-to-1, 1-to-many, many-to-1, many-to-many.'.
                 format(field)
             )
-        return result
+        if has_changed:
+            previous_data = self.previous_data[field.name] or ''
+            previous_pks = previous_data.split(', ')
+            if field.related_model is not None:
+                previous = field.related_model.objects.filter(
+                    pk__in=[int(pk) for pk in previous_pks if pk != '']
+                )
+                result.extend(list(previous))
+        return set(result)
 
-    def generate_history_for_interested_object(self, interested_object,
-                                               removed_data):
+    def generate_history_for_interested_object(self, interested_object):
         instance_class_name = self.instance.__class__.__name__
-        instance_name = instance_class_name.lower()
         history_message = '{action}d {object_type}'.format(
             action=self.instance_history.get_history_type_display(),
             object_type=instance_class_name
         )
         additional_data = self.get_additional_data()
+        instance_name = instance_class_name.lower()
         additional_data[instance_name] = history_message
         HistoricalRecord.objects.create(
             content_object=interested_object,
             history_type='~',
             history_user=self.history_user,
             history_user_id=self.history_user_id,
-            data=get_instance_field_data(interested_object, removed_data),
+            data=get_instance_field_data(interested_object),
             history_diff=[instance_name],
             additional_data=additional_data,
             related_field_history=self.instance_history

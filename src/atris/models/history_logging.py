@@ -102,6 +102,8 @@ class HistoryLogging(object):
         self._create_historical_record(instance, '-')
 
     def m2m_changed(self, instance, action, reverse, model, pk_set, **kwargs):
+        if not hasattr(instance._meta, 'history_logging'):
+            return
         if action == 'post_add':
             self._create_historical_record(instance, '~')
         elif action in ('pre_remove', 'pre_clear'):

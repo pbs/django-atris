@@ -6,9 +6,6 @@ from pytest import mark
 from tests.models import Actor, Episode, Link, Show
 
 
-# TODO: Tests for Issue#11
-
-
 @mark.django_db
 def test_related_history_created_for_interested_objects_when_observed_object_added(  # noqa
         show, writer):
@@ -424,3 +421,90 @@ def test_history_generated_for_interested_object_referenced_by_generic_field(
     assert next_show_updated.history_diff == ['link']
     assert next_show_updated.additional_data['link'] == 'Added Link'
     assert next_show_updated.related_field_history == show_url.history.first()
+
+
+@mark.skip(reason='Issue#11')
+@mark.django_db
+def test_modifications_to_interested_object_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
+        show, episode):
+    # act
+    show.title = 'Another title'
+    episode.title = 'Another title'
+    episode.save()
+    show.save()
+    # assert
+    assert show.history.count() == 4
+    episode_updated, title_updated = show.history.all()[:2]
+    assert episode_updated.history_type == '~'
+    assert episode_updated.history_diff == ['episode']
+    assert episode_updated.additional_data['episode'] == 'Updated Episode'
+    expected_data = {'id': str(show.pk),
+                     'title': 'Another title',
+                     'description': '',
+                     'links': '',
+                     'season': '',
+                     'specials': str(episode.pk)}
+    assert episode_updated.data == expected_data
+    assert title_updated.history_type == '~'
+    assert title_updated.history_diff == ['title', 'specials']
+    assert title_updated.additional_data == dict()
+    assert title_updated.data == expected_data
+
+
+@mark.django_db
+@mark.parametrize('entity', ['show', 'episode'])
+def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
+        entity):
+    # arrange
+    if entity == 'show':
+        from tests.tests.functional.history_logging.conftest import show
+        obj = show()
+
+        def expected_data(url, title=obj.title):
+            result = {'id': str(obj.pk),
+                      'title': title,
+                      'description': '',
+                      'links': str(url.pk),
+                      'season': '',
+                      'specials': ''}
+            return result
+
+    else:
+        from tests.tests.functional.history_logging.conftest import (
+            show, writer, episode)
+        show = show()
+        writer = writer()
+        obj = episode(show, writer)
+
+        def expected_data(url, title=obj.title):
+            result = {'id': str(obj.pk),
+                      'title': title,
+                      'description': '',
+                      'show': str(show.pk),
+                      'season': None,
+                      'cast': '',
+                      'author': str(writer.pk),
+                      'co_authors': ''}
+            return result
+
+    url = Link.objects.create(
+        name='PBS link',
+        url='http://pbs.org/mercy-street',
+        related_object=obj
+    )
+    # act
+    obj.title = 'Another title'
+    url.url = 'http://pbs.org/another-title'
+    url.save()
+    obj.save()
+    # assert
+    assert obj.history.count() == 4
+    title_updated, link_updated = obj.history.all()[:2]
+    assert title_updated.history_type == '~'
+    assert title_updated.history_diff == ['title']
+    assert title_updated.additional_data == dict()
+    assert title_updated.data == expected_data(url, 'Another title')
+    assert link_updated.history_type == '~'
+    assert link_updated.history_diff == ['link']
+    assert link_updated.additional_data['link'] == 'Updated Link'
+    assert link_updated.data == expected_data(url)

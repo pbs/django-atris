@@ -36,9 +36,21 @@ class Choice(models.Model):
     )
 
 
+class Admin(models.Model):
+    name = models.CharField(max_length=200)
+
+
+class Group(models.Model):
+    name = models.CharField(max_length=200)
+    admins = models.ManyToManyField(Admin, related_name='groups')
+
+    history = HistoryLogging()
+
+
 class Voter(models.Model):
     choice = models.ForeignKey(Choice, related_name='voters')
     name = models.CharField(max_length=200)
+    groups = models.ManyToManyField(Group, related_name='voters')
 
 
 class Show(models.Model):

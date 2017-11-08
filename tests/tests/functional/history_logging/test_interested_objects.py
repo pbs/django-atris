@@ -451,6 +451,7 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
     assert title_updated.data == expected_data
 
 
+@mark.skip(reason='Issue#11')
 @mark.django_db
 @mark.parametrize('entity', ['show', 'episode'])
 def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa

@@ -158,33 +158,6 @@ class TestDiffString:
                            'history diff.')
         assert result == 'No prior information available.', failure_message
 
-    def test_history_diff_is_generated_if_none(self, db, poll_content_type):
-        # arrange
-        pub_date = str(datetime.now())
-        HistoricalRecord.objects.create(
-            content_type=poll_content_type,
-            object_id=1,
-            history_type='+',
-            history_diff=[],
-            data={'id': '1',
-                  'question': 'What?',
-                  'pub_date': pub_date}
-        )
-        diffless_update = HistoricalRecord.objects.create(
-            content_type=poll_content_type,
-            object_id=1,
-            history_type='~',
-            history_diff=None,
-            data={'id': '1',
-                  'question': 'Test',
-                  'pub_date': pub_date}
-        )
-        # act
-        result = diffless_update.get_diff_to_prev_string()
-        # assert
-        assert result == 'Updated question'
-        assert diffless_update.history_diff == ['question']
-
 
 class TestHistoryLoggingOrdering():
 

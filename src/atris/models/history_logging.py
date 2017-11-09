@@ -11,7 +11,7 @@ from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.utils import six
 
 from .exceptions import InvalidRelatedField
-from .helpers import get_diff_fields, get_instance_field_data
+from .helpers import get_diff_fields, get_instance_field_data, from_writable_db
 from .historical_record import get_history_model
 
 
@@ -70,7 +70,6 @@ class HistoryLogging(object):
         setattr(cls, name, HistoryManager())
         self.module = cls.__module__
         self.model = cls
-        class_prepared.connect(self.finalize, sender=cls)
 
     def set_excluded_fields_names(self, cls):
         self.excluded_fields_names = getattr(

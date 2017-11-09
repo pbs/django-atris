@@ -70,6 +70,7 @@ class HistoryLogging(object):
         setattr(cls, name, HistoryManager())
         self.module = cls.__module__
         self.model = cls
+        class_prepared.connect(self.finalize, sender=cls)
 
     def set_excluded_fields_names(self, cls):
         self.excluded_fields_names = getattr(
@@ -179,9 +180,10 @@ class HistoricalRecordGenerator(object):
 
     def __init__(self, instance, history_type, user, ignored_users=None):
         self.instance = instance
+        self.previous_data = getattr(
+            from_writable_db(self.instance.history).first(), 'data', None)
         self.history_logging = self.instance._meta.history_logging
         self.history_type = history_type
-        self.previous_data = getattr(instance.history.first(), 'data', None)
         self.user = user or getattr(instance, 'history_user', None)
         self.ignored_users = ignored_users if ignored_users else {}
         self.history_user, self.history_user_id = self.get_user_info(self.user)

@@ -15,8 +15,6 @@ from django.db.models.query import QuerySet
 from django.utils import six
 from django.utils.timezone import now
 
-from .helpers import get_diff_fields
-
 
 str = unicode if six.PY2 else str  # noqa
 
@@ -193,6 +191,14 @@ class AbstractHistoricalRecord(models.Model):
         ordering = ['-history_date']
         abstract = True
 
+    @property
+    def previos_version(self):
+        return self.__class__.objects.previous_version_by_model_and_id(
+            model=self.content_type,
+            object_id=self.object_id,
+            history_id=self.id
+        )
+
     def get_diff_to_prev_string(self):
         """
         Generates a string which describes the changes that occurred between
@@ -201,13 +207,9 @@ class AbstractHistoricalRecord(models.Model):
         :return: Said string.
         :rtype String
         """
-        # Recalculating diff in case the missing history has been
-        # generated/restored.
-        if self.history_diff is None:
-            self._regenerate_history_diff()
         diff_string = '{}d '.format(self.get_history_type_display())
         if self.history_type == '~':
-            if self.history_diff is None:
+            if not self.previos_version:
                 diff_string = 'No prior information available.'
             elif not self.history_diff:
                 diff_string += 'with no change'
@@ -231,19 +233,3 @@ class AbstractHistoricalRecord(models.Model):
             return field.verbose_name
         else:
             return field.name.replace('_', ' ').title()
-
-    def _regenerate_history_diff(self):
-        previous_data = getattr(self._get_prev_version(), 'data', None)
-        tracked_model = self.content_type.model_class()
-        excluded_fields = (tracked_model._meta.history_logging
-                           .excluded_fields_names)
-        self.history_diff = get_diff_fields(tracked_model, self.data,
-                                            previous_data, excluded_fields)
-        self.save(update_fields=['history_diff'])
-
-    def _get_prev_version(self):
-        return self.__class__.objects.previous_version_by_model_and_id(
-            model=self.content_type,
-            object_id=self.object_id,
-            history_id=self.id
-        )

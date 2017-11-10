@@ -16,11 +16,10 @@ def test_related_object_recorded_with_module_name_if_no_related_name_specified(
     assert 'season' in show.history.first().data
 
 
-@mark.skip(reason='Issue#38')
+@mark.skip(reason='Issue#18')
 @mark.django_db
 def test_changes_to_many_to_one_relations_recorded_automatically(
         show, episode, season):
-    # arrange
     # assert
     season_added, special_added = show.history.all()[:2]
     assert season_added.history_type == '~'
@@ -31,7 +30,7 @@ def test_changes_to_many_to_one_relations_recorded_automatically(
     assert special_added.data['specials'] == str(episode.pk)
 
 
-@mark.skip(reason='Issue#38')
+@mark.skip(reason='Issue#18')
 @mark.django_db
 def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa
         show, season):
@@ -67,7 +66,7 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
     # assert
     link_added = show.history.first()
     assert link_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert link_added.history_diff == ['links']
     expected_links = '{}, {}'.format(show_url_2.pk, show_url_3.pk)
     assert link_added.data['links'] == expected_links
@@ -94,7 +93,7 @@ def test_one_to_one_relations_tracked_on_both_models(writer, episode):
     # assert
     special_added_for_writer = writer.history.first()
     assert special_added_for_writer.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added_for_writer.history_diff == ['work']
     assert special_added_for_writer.data['work'] == str(episode.pk)
     special_created = episode.history.first()
@@ -115,12 +114,12 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.data['cast'] == '{}, {}'.format(actor3.pk, actor2.pk)
     special_added = actor3.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
     special_added = actor2.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
 
@@ -141,7 +140,7 @@ def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode):
     assert actor3.history.count() == 3
     special_added = actor3.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
 
@@ -160,7 +159,7 @@ def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_object
     assert actor2.history.count() == 3
     special_added = actor2.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
 
@@ -181,13 +180,13 @@ def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
     assert actor3.history.count() == 3
     special_added = actor3.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
     assert actor2.history.count() == 3
     special_added = actor2.history.first()
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#38 is fixed
+    # TODO: uncomment after Issue#18 is fixed
     # assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
 

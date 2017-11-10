@@ -212,16 +212,23 @@ class HistoricalRecordGenerator(object):
         diff_fields, should_generate_history = self.get_differing_fields(data)
         if not should_generate_history:
             return
-        self.instance_history = HistoricalRecord.objects.create(
+        instance_history = HistoricalRecord.objects.create(
             content_object=self.instance,
             history_type=self.history_type,
             history_user=self.history_user,
             history_user_id=self.history_user_id,
             data=data,
             history_diff=diff_fields,
-            additional_data=self.get_additional_data()
+            additional_data=get_additional_data(self.instance)
         )
-        self.generate_history_for_interested_objects(diff_fields)
+        if self.history_logging.interested_related_fields:
+            generate_for_interested_objects = InterestedObjectHistoryGenerator(
+                self.instance,
+                instance_history,
+                self.history_logging.interested_related_fields,
+                self.previous_data
+            )
+            generate_for_interested_objects()
 
     def should_skip_history_for_user(self):
         ids_to_skip = self.ignored_users.get('user_ids', [])
@@ -241,22 +248,22 @@ class HistoricalRecordGenerator(object):
             should_generate_history = True
         return diff_fields, should_generate_history
 
-    def get_additional_data(self):
-        try:
-            additional_data = getattr(
-                self.instance, self.history_logging.additional_data_param_name)
-        except AttributeError:
-            result = {}
-        else:
-            result = {key: str(value)
-                      for key, value in additional_data.items()}
-        return result
 
-    def generate_history_for_interested_objects(self, diff_fields):
-        for field in self.history_logging.interested_related_fields:
+class InterestedObjectHistoryGenerator(object):
+
+    def __init__(self, instance, instance_history, interested_fields,
+                 previous_data):
+        self.instance = instance
+        self.instance_history = instance_history
+        self.interested_fields = interested_fields
+        self.previous_data = previous_data
+
+    def __call__(self):
+        for field in self.interested_fields:
             interested_objects = self.get_interested_objects(
                 field,
-                field.name in diff_fields or self.history_type == '-'
+                field.name in self.instance_history.history_diff or
+                self.instance_history.history_type == '-'
             )
             for interested_object in interested_objects:
                 self.generate_history_for_interested_object(interested_object)
@@ -279,31 +286,51 @@ class HistoricalRecordGenerator(object):
                 format(field)
             )
         if has_changed:
-            previous_data = self.previous_data[field.name] or ''
-            previous_pks = previous_data.split(', ')
-            if field.related_model is not None:
-                previous = field.related_model.objects.filter(
-                    pk__in=[int(pk) for pk in previous_pks if pk != '']
-                )
-                result.extend(list(previous))
-        return set(result)
+            previous = self.get_previous_interested_objects(field)
+            result.extend(previous)
+            result = list(set(result))  # make sure there are no duplicates
+        return result
+
+    def get_previous_interested_objects(self, field):
+        previous_data = self.previous_data[field.name] or ''
+        previous_pks = previous_data.split(', ')
+        if field.related_model is not None:
+            previous = field.related_model.objects.filter(
+                pk__in=[int(pk) for pk in previous_pks if pk != '']
+            )
+            previous = list(previous)
+        else:
+            previous = list()
+        return previous
 
     def generate_history_for_interested_object(self, interested_object):
+        additional_data = get_additional_data(interested_object)
         instance_class_name = self.instance.__class__.__name__
-        history_message = '{action}d {object_type}'.format(
+        instance_name = instance_class_name.lower()
+        additional_data[instance_name] = '{action}d {object_type}'.format(
             action=self.instance_history.get_history_type_display(),
             object_type=instance_class_name
         )
-        additional_data = self.get_additional_data()
-        instance_name = instance_class_name.lower()
-        additional_data[instance_name] = history_message
         HistoricalRecord.objects.create(
             content_object=interested_object,
             history_type='~',
-            history_user=self.history_user,
-            history_user_id=self.history_user_id,
+            history_user=self.instance_history.history_user,
+            history_user_id=self.instance_history.history_user_id,
             data=get_instance_field_data(interested_object),
             history_diff=[instance_name],
             additional_data=additional_data,
             related_field_history=self.instance_history
         )
+
+
+def get_additional_data(instance):
+    history_logging = instance._meta.history_logging
+    try:
+        additional_data = getattr(instance,
+                                  history_logging.additional_data_param_name)
+    except AttributeError:
+        result = {}
+    else:
+        result = {key: str(value)
+                  for key, value in additional_data.items()}
+    return result

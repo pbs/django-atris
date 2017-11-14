@@ -3,8 +3,9 @@ import sys
 from shutil import rmtree
 from os.path import abspath, dirname, join
 
-import django
 from django.conf import settings
+
+import pytest
 
 
 sys.path.insert(0, abspath(dirname(__file__)))
@@ -49,18 +50,7 @@ DEFAULT_SETTINGS = dict(
 )
 
 
-def main(tests):
+if __name__ == "__main__":
     if not settings.configured:
         settings.configure(**DEFAULT_SETTINGS)
-    if hasattr(django, 'setup'):
-        django.setup()
-    try:
-        from django.test.runner import DiscoverRunner
-    except ImportError:
-        from django.test.simple import DjangoTestSuiteRunner as DiscoverRunner
-    failures = DiscoverRunner(failfast=False, verbosity=2).run_tests(tests)
-    sys.exit(failures)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+    sys.exit(pytest.main(sys.argv[1:]))

@@ -2,16 +2,15 @@ import logging
 
 from django.core.management import BaseCommand
 
-from atris.models import get_history_model
+from atris.models import ArchivedHistoricalRecord
 
-logger = logging.getLogger('old_history_deleting')
-HistoricalRecord = get_history_model()
+logger = logging.getLogger('old_archived_history_deleting')
 
 
 class Command(BaseCommand):
     help = """
-        Deletes historical records older than the specified days or months.
-        You must supply either the days or the weeks param.
+        Deletes archived historical records older than the specified days or 
+        months. You must supply either the days or the weeks param.
     """
 
     PARAM_ERROR = 'You must supply either the days or the weeks param'
@@ -22,7 +21,7 @@ class Command(BaseCommand):
             dest='days',
             type=int,
             default=None,
-            help='Any historical record older than the number of days '
+            help='Any archived historical record older than the number of days '
                  'specified gets deleted.'
         )
         parser.add_argument(
@@ -30,8 +29,8 @@ class Command(BaseCommand):
             dest='weeks',
             type=int,
             default=None,
-            help='Any historical record older than the number of months '
-                 'specified gets deleted.'
+            help='Any archived historical record older than the number of '
+                 'months specified gets deleted.'
         )
 
     def handle(self, *args, **options):
@@ -43,9 +42,10 @@ class Command(BaseCommand):
             ))
             return
         try:
-            deleted_entries = HistoricalRecord.objects.older_than(
+            deleted_entries = ArchivedHistoricalRecord.objects.older_than(
                               days, weeks).delete()
-            self.stdout.write('{} deleted.\n'.format(deleted_entries[0]))
+            self.stdout.write('{} archived records deleted.\n'.format(
+                deleted_entries[0]))
         except Exception as ex:
             # IndexError from deleted_entries[0] OR other DB issues
             logger.error("Attempt to delete {} failed".format(self.__name__))

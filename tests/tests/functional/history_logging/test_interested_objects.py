@@ -40,20 +40,19 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
     episode_cast_history = episode.history.filter(history_type='~')
     actor2_added = episode_cast_history.first()
     actor1_added = episode_cast_history[1]
-    actor1_updates = actor1.history.filter(history_type='~')
-    assert actor1_updates.count() == 2
-    actor1_history_diff_episode = actor1_updates.filter(
-        history_diff__contains=['episode'])
-    assert actor1_history_diff_episode.count() == 2
-    actor1_additional_data_updated_episode = actor1_updates.filter(
-        additional_data__episode='Updated Episode')
-    assert actor1_additional_data_updated_episode.count() == 2
-    assert actor1_updates[0].related_field_history == actor2_added
-    assert actor1_updates[1].related_field_history == actor1_added
-    actor2_update = actor2.history.get(history_type='~')
-    assert actor2_update.history_diff == ['episode']
-    assert actor2_update.related_field_history == actor2_added
-    assert actor2_update.additional_data['episode'] == 'Updated Episode'
+    actor1_episode_updated = actor1.history.filter(
+        history_diff__contains=['episode'],
+        additional_data__episode='Updated Episode'
+    )
+    assert actor1_episode_updated.count() == 2
+    assert actor1_episode_updated[0].related_field_history == actor2_added
+    assert actor1_episode_updated[1].related_field_history == actor1_added
+    actor2_episode_updated = actor2.history.filter(
+        history_diff__contains=['episode'],
+        additional_data__episode='Updated Episode',
+        related_field_history=actor2_added
+    )
+    assert actor2_episode_updated.count() == 1
 
 
 @mark.django_db
@@ -277,7 +276,10 @@ def test_related_history_not_created_for_objects_not_added_in_interested_fields(
     episode.save()
     episode.delete()
     # assert
-    assert season.history.count() == 1
+    episode_updates_notifications = season.history.filter(
+        related_field_history__isnull=False
+    )
+    assert episode_updates_notifications.exists() is False
     assert Episode.history.filter(object_id=episode_id).count() == 3
 
 

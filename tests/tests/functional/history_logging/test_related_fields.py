@@ -16,21 +16,21 @@ def test_related_object_recorded_with_module_name_if_no_related_name_specified(
     assert 'season' in show.history.first().data
 
 
-@mark.skip(reason='Issue#18')
 @mark.django_db
 def test_changes_to_many_to_one_relations_recorded_automatically(
         show, episode, season):
     # assert
-    season_added, special_added = show.history.all()[:2]
+    season_added, episode_update_notif, special_added = show.history.all()[:3]
     assert season_added.history_type == '~'
     assert season_added.history_diff == ['season']
     assert season_added.data['season'] == str(season.pk)
+    episode_created = episode.history.first()
+    assert episode_update_notif.related_field_history == episode_created
     assert special_added.history_type == '~'
     assert special_added.history_diff == ['specials']
     assert special_added.data['specials'] == str(episode.pk)
 
 
-@mark.skip(reason='Issue#18')
 @mark.django_db
 def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa
         show, season):
@@ -64,10 +64,10 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
         related_object=show
     )
     # assert
-    link_added = show.history.first()
+    link_update_notif, link_added = show.history.all()[:2]
+    assert link_update_notif.related_field_history is not None
     assert link_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert link_added.history_diff == ['links']
+    assert link_added.history_diff == ['links']
     expected_links = '{}, {}'.format(show_url_2.pk, show_url_3.pk)
     assert link_added.data['links'] == expected_links
 
@@ -91,10 +91,10 @@ def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(
 @mark.django_db
 def test_one_to_one_relations_tracked_on_both_models(writer, episode):
     # assert
-    special_added_for_writer = writer.history.first()
+    episode_created_notif, special_added_for_writer = writer.history.all()[:2]
+    assert episode_created_notif.related_field_history is not None
     assert special_added_for_writer.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added_for_writer.history_diff == ['work']
+    assert special_added_for_writer.history_diff == ['work']
     assert special_added_for_writer.data['work'] == str(episode.pk)
     special_created = episode.history.first()
     assert special_created.history_type == '+'
@@ -112,15 +112,15 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == '{}, {}'.format(actor3.pk, actor2.pk)
-    special_added = actor3.history.first()
+    episode_update_notif, special_added = actor3.history.all()[:2]
+    assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
-    special_added = actor2.history.first()
+    episode_update_notif, special_added = actor2.history.all()[:2]
+    assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
 
 
@@ -137,11 +137,11 @@ def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == str(actor2.pk)
-    assert actor3.history.count() == 3
-    special_added = actor3.history.first()
+    assert actor3.history.count() == 5
+    episode_update_notif, special_added = actor3.history.all()[:2]
+    assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
 
 
@@ -155,12 +155,13 @@ def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_object
     episode.cast.remove(actor3)
     # assert
     assert episode.history.count() == 3
-    assert actor3.history.count() == 3
-    assert actor2.history.count() == 3
-    special_added = actor2.history.first()
+    assert actor3.history.count() == 5
+    assert actor2.history.count() == 4
+    ep_notif_1, ep_notif_2, special_added = actor2.history.all()[:3]
+    assert ep_notif_1.related_field_history is not None
+    assert ep_notif_2.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == str(episode.pk)
 
 
@@ -177,17 +178,17 @@ def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == ''
-    assert actor3.history.count() == 3
-    special_added = actor3.history.first()
+    assert actor3.history.count() == 5
+    episode_update_notif, special_added = actor3.history.all()[:2]
+    assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
-    assert actor2.history.count() == 3
-    special_added = actor2.history.first()
+    assert actor2.history.count() == 5
+    episode_update_notif, special_added = actor2.history.all()[:2]
+    assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
-    # TODO: uncomment after Issue#18 is fixed
-    # assert special_added.history_diff == ['filmography']
+    assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
 
 

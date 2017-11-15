@@ -210,7 +210,6 @@ def test_excluded_many_to_many_field_not_recorded_in_history(episode):
     assert 'contributions' not in coauthor.history.first().data
 
 
-@mark.skip(reason='Issue#15')
 @mark.django_db
 def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregistered_object(  # noqa
         choice):
@@ -227,21 +226,21 @@ def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregis
     voter.groups.remove(group2)
     voter.groups.clear()
     # assert
-    group1_set, group1_cleared = group1.history.all()[1:]
+    group1_cleared, group1_set = group1.history.all()[:2]
     assert group1_set.history_type == '~'
     assert group1_set.history_diff == ['voters']
     assert group1_set.data['voters'] == str(voter.pk)
     assert group1_cleared.history_type == '~'
     assert group1_cleared.history_diff == ['voters']
     assert group1_cleared.data['voters'] == ''
-    group2_added, group2_removed = group2.history.all()[1:]
+    group2_removed, group2_added = group2.history.all()[:2]
     assert group2_added.history_type == '~'
     assert group2_added.history_diff == ['voters']
     assert group2_added.data['voters'] == str(voter.pk)
     assert group2_removed.history_type == '~'
     assert group2_removed.history_diff == ['voters']
     assert group2_removed.data['voters'] == ''
-    group3_set, group3_cleared = group3.history.all()[1:]
+    group3_cleared, group3_set = group3.history.all()[:2]
     assert group3_set.history_type == '~'
     assert group3_set.history_diff == ['voters']
     assert group3_set.data['voters'] == str(voter.pk)
@@ -325,7 +324,6 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object():  # n
     assert group_created.history_type == '+'
 
 
-@mark.skip(reason='Issue#15')
 @mark.django_db
 def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_untracked_object():  # noqa
     # arrange
@@ -341,21 +339,21 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
     admin.groups.remove(group2)
     admin.groups.clear()
     # assert
-    group1_set, group1_cleared = group1.history.all()[1:]
+    group1_cleared, group1_set = group1.history.all()[:2]
     assert group1_set.history_type == '~'
     assert group1_set.history_diff == ['admins']
     assert group1_set.data['admins'] == str(admin.pk)
     assert group1_cleared.history_type == '~'
     assert group1_cleared.history_diff == ['admins']
     assert group1_cleared.data['admins'] == ''
-    group2_added, group2_removed = group2.history.all()[1:]
+    group2_removed, group2_added = group2.history.all()[:2]
     assert group2_added.history_type == '~'
     assert group2_added.history_diff == ['admins']
     assert group2_added.data['admins'] == str(admin.pk)
     assert group2_removed.history_type == '~'
     assert group2_removed.history_diff == ['admins']
     assert group2_removed.data['admins'] == ''
-    group3_set, group3_cleared = group3.history.all()[1:]
+    group3_cleared, group3_set = group3.history.all()[:2]
     assert group3_set.history_type == '~'
     assert group3_set.history_diff == ['admins']
     assert group3_set.data['admins'] == str(admin.pk)

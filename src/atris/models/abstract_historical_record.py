@@ -16,7 +16,7 @@ from django.utils import six
 from django.utils.timezone import now
 
 
-str = unicode if six.PY2 else str
+str = unicode if six.PY2 else str  # noqa
 
 
 logger = logging.getLogger(__name__)
@@ -209,10 +209,11 @@ class AbstractHistoricalRecord(models.Model):
         """
         diff_string = '{}d '.format(self.get_history_type_display())
         if self.history_type == '~':
-            if not self.previos_version:
-                diff_string = 'No prior information available.'
-            elif not self.history_diff:
-                diff_string += 'with no change'
+            if not self.history_diff:
+                if not self.previos_version:
+                    diff_string = 'No prior information available.'
+                else:
+                    diff_string += 'with no change'
             else:
                 verbose_names = [
                     self._get_field_name_display(field_name)

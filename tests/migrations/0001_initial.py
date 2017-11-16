@@ -77,12 +77,36 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
+            name='Admin',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=200)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Group',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=200)),
+            ],
+        ),
+        migrations.AddField(
+            model_name='group',
+            name='admins',
+            field=models.ManyToManyField(related_name='groups', to='tests.Admin'),
+        ),
+        migrations.CreateModel(
             name='Voter',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=200)),
                 ('choice', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='voters', to='tests.Choice')),
             ],
+        ),
+        migrations.AddField(
+            model_name='voter',
+            name='groups',
+            field=models.ManyToManyField(related_name='votes', to='tests.Group'),
         ),
         migrations.CreateModel(
             name='Writer',

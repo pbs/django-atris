@@ -6,28 +6,21 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     """
     Returns the fields of `data` for which the values differ in
     `previous_data`. The fields that are given in `excluded_fields_names` are
-    not registered as having changed, but are returned in the secod list of the
-    result. If there is no previous data, 2 empty lists are returned.
+    not registered as having changed.
     :param model: - the Django model or an instance of that model.
     """
-    diff = []
-    excluded = []
     if not previous_data:
-        return diff, excluded
-    for f, v in data.items():
-        if previous_data.get(f) != v:
-            if f in excluded_fields_names:
-                excluded.append(f)
-            else:
-                diff.append(model._meta.get_field(f).name)
-    return diff, excluded
+        return None
+    result = [model._meta.get_field(f).name
+              for f, v in data.items()
+              if f not in excluded_fields_names and previous_data.get(f) != v]
+    return result
 
 
-def get_instance_field_data(instance, removed_data={}):
+def get_instance_field_data(instance):
     """
     Returns a dictionary with the attribute values of instance, serialized as
-    strings. `removed_data` is a dictionary of field name to IDs list for the
-    objects that are to be removed from the many-to-many fields.
+    strings.
     """
     data = {}
     instance_meta = instance._meta
@@ -47,9 +40,6 @@ def get_instance_field_data(instance, removed_data={}):
             value = None
         if field.many_to_many or field.one_to_many:
             ids = from_writable_db(value).values_list('pk', flat=True)
-            if name in removed_data:
-                ids = ([] if removed_data[name] is None
-                       else ids.exclude(pk__in=removed_data[name]))
             data[name] = ', '.join([str(e) for e in ids])
         elif field.one_to_one and not field.concrete:
             data[name] = str(value.pk) if value is not None else None

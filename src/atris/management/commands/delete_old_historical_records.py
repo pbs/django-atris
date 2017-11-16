@@ -50,15 +50,9 @@ class Command(BaseCommand):
                 msg=self.PARAM_ERROR,
             ))
             return
-        from_archive = options.get('from_archive')
 
-        try:
-            model_to_delete = ArchivedHistoricalRecord if \
-                from_archive is True else HistoricalRecord
-            deleted_entries = model_to_delete.objects.older_than(
-                days, weeks).delete()
-            self.stdout.write('{} {} deleted.\n'.format(
-                deleted_entries[0], model_to_delete.__name__))
-        except Exception as ex:
-            # IndexError from deleted_entries[0] OR other DB issues
-            logger.error("Attempt to delete {} failed".format(self.__name__))
+        model = ArchivedHistoricalRecord if options.get('from_archive') \
+            else HistoricalRecord
+        deleted_entries = model.objects.older_than(days, weeks).delete()
+        self.stdout.write('{} {} deleted.\n'.format(
+            deleted_entries[0], model.__name__))

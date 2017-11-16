@@ -26,7 +26,7 @@ def test_delete_older_than_days():
                             days=20, stdout=out)
     # assert
     assert Poll.history.count() == 1
-    assert '1 HistoricalRecord deleted.' in out.getvalue()
+    assert '1 HistoricalRecord deleted.\n' in out.getvalue()
 
 
 @mark.django_db
@@ -43,7 +43,7 @@ def test_delete_older_than_weeks():
                             weeks=1, stdout=out)
     # assert
     assert Poll.history.count() == 1
-    assert '1 HistoricalRecord deleted.' in out.getvalue()
+    assert '1 HistoricalRecord deleted.\n' in out.getvalue()
 
 
 @mark.django_db

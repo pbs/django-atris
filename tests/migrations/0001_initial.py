@@ -150,4 +150,15 @@ class Migration(migrations.Migration):
             name='poll',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='choices', to='tests.Poll'),
         ),
+        migrations.CreateModel(
+            name='Episode2',
+            fields=[
+                ('episode_ptr', models.OneToOneField(auto_created=True, primary_key=True, serialize=False, to='tests.Episode')),
+            ],
+        ),
+        migrations.AddField(
+            model_name='episode2',
+            name='groups',
+            field=models.ManyToManyField(related_name='episodes', to='tests.Group'),
+        ),
     ]

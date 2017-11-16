@@ -51,7 +51,7 @@ class TestDeleteOldHistory(TestCase):
         management.call_command(self.command_name, days=20, stdout=out)
 
         self.assertEquals(pre_delete_count - 1, Poll.history.count())
-        self.assertIn('1 deleted.', out.getvalue())
+        self.assertIn('1 HistoricalRecord deleted.\n', out.getvalue())
 
     def test_delete_older_than_weeks(self):
         out = StringIO()
@@ -67,7 +67,7 @@ class TestDeleteOldHistory(TestCase):
         management.call_command(self.command_name, weeks=1, stdout=out)
 
         self.assertEquals(pre_delete_count - 1, Poll.history.count())
-        self.assertIn('1 deleted.', out.getvalue())
+        self.assertIn('1 HistoricalRecord deleted.\n', out.getvalue())
 
     def test_no_params_passed_signals_error(self):
         out = StringIO()

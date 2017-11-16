@@ -1,5 +1,7 @@
 from pytest import mark
 
+from atris.models import HistoryLogging
+
 from tests.models import Show, Actor, Writer, Link, Voter, Group, Admin
 
 
@@ -226,6 +228,7 @@ def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregis
     voter.groups.remove(group2)
     voter.groups.clear()
     # assert
+    assert len(HistoryLogging._cleared_related_objects) == 0
     group1_cleared, group1_set = group1.history.all()[:2]
     assert group1_set.history_type == '~'
     assert group1_set.history_diff == ['voters']
@@ -265,6 +268,7 @@ def test_history_generated_for_object_through_reverse_m2m_relation_with_untracke
     group.voters.remove(voter2)
     group.voters.clear()
     # assert
+    assert len(HistoryLogging._cleared_related_objects) == 0
     (voters_cleared,
      voter2_removed,
      voter3_added,
@@ -302,6 +306,7 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object():  # n
     group.admins.remove(admin2)
     group.admins.clear()
     # assert
+    assert len(HistoryLogging._cleared_related_objects) == 0
     (admins_cleared,
      admin2_removed,
      admin3_added,
@@ -339,6 +344,7 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
     admin.groups.remove(group2)
     admin.groups.clear()
     # assert
+    assert len(HistoryLogging._cleared_related_objects) == 0
     group1_cleared, group1_set = group1.history.all()[:2]
     assert group1_set.history_type == '~'
     assert group1_set.history_diff == ['admins']

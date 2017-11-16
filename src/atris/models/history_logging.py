@@ -39,7 +39,7 @@ class HistoryManager(object):
 class HistoryLogging(object):
 
     thread = threading.local()
-    cleared_related_objects = dict()
+    _cleared_related_objects = dict()
 
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
@@ -120,10 +120,11 @@ class HistoryLogging(object):
                 field_name = find_m2m_field_name_by_model(
                     instance._meta, model, reverse)
                 related_objects = getattr(instance, field_name).all()
-                self.cleared_related_objects[instance] = list(related_objects)
+                self._cleared_related_objects[instance] = list(related_objects)
             elif (action == 'post_clear' and
-                  instance in self.cleared_related_objects):
-                for related_object in self.cleared_related_objects[instance]:
+                  instance in self._cleared_related_objects):
+                related_objects = self._cleared_related_objects.pop(instance)
+                for related_object in related_objects:
                     self._create_historical_record(related_object, '~', False)
         elif action.startswith('post'):
             self._create_historical_record(instance, '~')

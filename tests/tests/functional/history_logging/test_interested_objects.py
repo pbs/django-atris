@@ -425,7 +425,6 @@ def test_history_generated_for_interested_object_referenced_by_generic_field(
     assert next_show_updated.related_field_history == show_url.history.first()
 
 
-@mark.skip(reason='Issue#11')
 @mark.django_db
 def test_modifications_to_interested_object_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
         show, episode):
@@ -435,7 +434,7 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
     episode.save()
     show.save()
     # assert
-    assert show.history.count() == 4
+    assert show.history.count() == 5
     episode_updated, title_updated = show.history.all()[:2]
     assert episode_updated.history_type == '~'
     assert episode_updated.history_diff == ['episode']
@@ -448,12 +447,11 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
                      'specials': str(episode.pk)}
     assert episode_updated.data == expected_data
     assert title_updated.history_type == '~'
-    assert title_updated.history_diff == ['title', 'specials']
+    assert title_updated.history_diff == ['title']
     assert title_updated.additional_data == dict()
     assert title_updated.data == expected_data
 
 
-@mark.skip(reason='Issue#11')
 @mark.django_db
 @mark.parametrize('entity', ['show', 'episode'])
 def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
@@ -462,15 +460,19 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     if entity == 'show':
         from tests.tests.functional.history_logging.conftest import show
         obj = show()
+        obj_history_count = 5
 
-        def expected_data(url, title=obj.title):
+        def expected_data(url):
             result = {'id': str(obj.pk),
-                      'title': title,
+                      'title': 'Another title',
                       'description': '',
                       'links': str(url.pk),
                       'season': '',
                       'specials': ''}
             return result
+
+        def expected_additional_data(**extra_data):
+            return dict(**extra_data)
 
     else:
         from tests.tests.functional.history_logging.conftest import (
@@ -478,10 +480,11 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         show = show()
         writer = writer()
         obj = episode(show, writer)
+        obj_history_count = 4
 
-        def expected_data(url, title=obj.title):
+        def expected_data(url):
             result = {'id': str(obj.pk),
-                      'title': title,
+                      'title': 'Another title',
                       'description': '',
                       'show': str(show.pk),
                       'season': None,
@@ -489,6 +492,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                       'author': str(writer.pk),
                       'co_authors': ''}
             return result
+
+        def expected_additional_data(**extra_data):
+            return dict(where_from='System', **extra_data)
 
     url = Link.objects.create(
         name='PBS link',
@@ -501,12 +507,12 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     url.save()
     obj.save()
     # assert
-    assert obj.history.count() == 4
-    title_updated, link_updated = obj.history.all()[:2]
+    assert obj.history.count() == obj_history_count
+    link_updated, title_updated = obj.history.all()[:2]
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
-    assert title_updated.additional_data == dict()
-    assert title_updated.data == expected_data(url, 'Another title')
+    assert title_updated.additional_data == expected_additional_data()
+    assert title_updated.data == expected_data(url)
     assert link_updated.history_type == '~'
     assert link_updated.history_diff == ['link']
     assert link_updated.additional_data['link'] == 'Updated Link'

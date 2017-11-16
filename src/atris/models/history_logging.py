@@ -352,18 +352,26 @@ class InterestedObjectHistoryGenerator(object):
                 self.previous_data if field_value_changed else None
             )
             interested_objects = get_related_objects()
-            for interested_object in interested_objects:
+            for interested_object, status in interested_objects.items():
                 # Register any changes to the interested object before the
                 # observed object notification is logged into history.
                 fake_save(interested_object)
-                self.generate_history_for_interested_object(interested_object)
+                self.generate_history_for_interested_object(interested_object,
+                                                            status)
 
-    def generate_history_for_interested_object(self, interested_object):
+    def generate_history_for_interested_object(self, interested_object,
+                                               status):
         additional_data = get_additional_data(interested_object)
         instance_class_name = self.instance.__class__.__name__
         instance_name = instance_class_name.lower()
-        additional_data[instance_name] = '{action}d {object_type}'.format(
-            action=self.instance_history.get_history_type_display(),
+        if status is HistoryEnabledRelatedObjectsCollecter.ADDED:
+            action = 'Added'
+        elif status is HistoryEnabledRelatedObjectsCollecter.REMOVED:
+            action = 'Removed'
+        else:
+            action = self.instance_history.get_history_type_display() + 'd'
+        additional_data[instance_name] = '{action} {object_type}'.format(
+            action=action,
             object_type=instance_class_name
         )
         HistoricalRecord.objects.create(
@@ -379,6 +387,10 @@ class InterestedObjectHistoryGenerator(object):
 
 
 class HistoryEnabledRelatedObjectsCollecter(object):
+
+    ADDED = True
+    REMOVED = False
+    UNMODIFIED = None
 
     def __init__(self, instance, field_name, previous_data=None):
         self.instance = instance
@@ -397,22 +409,45 @@ class HistoryEnabledRelatedObjectsCollecter(object):
         except ObjectDoesNotExist:
             return []
         if self.field.one_to_one or self.field.many_to_one:
-            # A single result is guaranteed.
-            result = [referenced_object] if referenced_object else []
+            # A single element is guaranteed.
+            related_objects = [referenced_object] if referenced_object else []
         elif self.field.one_to_many or self.field.many_to_many:
             # The attribute is a RelatedManager instance.
-            result = list(referenced_object.all())
+            related_objects = list(referenced_object.all())
         else:
             raise TypeError(
                 'Field {} did not match any known related field types. Should '
                 'be one of: 1-to-1, 1-to-many, many-to-1, many-to-many.'.
                 format(self.field)
             )
-        result = list(set(result) | set(self.get_previous_objects()))
-        if result and hasattr(result[0]._meta, 'history_logging'):
+        previous_objects = self.get_previous_objects()
+        tracks_history = (
+            related_objects and hasattr(related_objects[0]._meta,
+                                        'history_logging') or
+            previous_objects and hasattr(previous_objects[0]._meta,
+                                         'history_logging')
+        )
+        if tracks_history:
+            if self.previous_data and related_objects:
+                current_objects = set(related_objects)
+                previous_objects = set(previous_objects)
+                added = current_objects - previous_objects
+                unmodified = current_objects & previous_objects
+                removed = previous_objects - current_objects
+                result = dict([(o, self.ADDED) for o in added] +
+                              [(o, self.UNMODIFIED) for o in unmodified] +
+                              [(o, self.REMOVED) for o in removed])
+            elif self.previous_data:
+                result = dict(
+                    [(o, self.UNMODIFIED) for o in self.previous_data]
+                )
+            else:
+                result = dict(
+                    [(o, self.UNMODIFIED) for o in related_objects]
+                )
             return result
         else:
-            return list()
+            return dict()
 
     def get_previous_objects(self):
         previous_pks = self.get_previous_object_pks()

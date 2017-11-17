@@ -139,10 +139,13 @@ class HistoryLogging(object):
 
     def post_save(self, instance, created=True, raw=False, **kwargs):
         if not raw:
-            self._create_historical_record(instance, created and '+' or '~')
+            self._create_historical_record(
+                instance,
+                created and HistoricalRecord.CREATE or HistoricalRecord.UPDATE
+            )
 
     def post_delete(self, instance, **kwargs):
-        self._create_historical_record(instance, '-')
+        self._create_historical_record(instance, HistoricalRecord.DELETE)
 
     def m2m_changed(self, instance, action, reverse, model, pk_set, **kwargs):
         only_related_model_tracks_history = (
@@ -152,7 +155,8 @@ class HistoryLogging(object):
         if only_related_model_tracks_history:
             if action in ('post_add', 'post_remove'):
                 for related_object in model.objects.filter(pk__in=pk_set):
-                    self._create_historical_record(related_object, '~')
+                    self._create_historical_record(related_object,
+                                                   HistoricalRecord.UPDATE)
             elif action == 'pre_clear':
                 field_name = find_m2m_field_name_by_model(
                     instance._meta, model, reverse)
@@ -162,9 +166,10 @@ class HistoryLogging(object):
                   instance in self._cleared_related_objects):
                 related_objects = self._cleared_related_objects.pop(instance)
                 for related_object in related_objects:
-                    self._create_historical_record(related_object, '~', False)
+                    self._create_historical_record(
+                        related_object, HistoricalRecord.UPDATE, False)
         elif action.startswith('post'):
-            self._create_historical_record(instance, '~')
+            self._create_historical_record(instance, HistoricalRecord.UPDATE)
 
     def _create_historical_record(self, instance, history_type,
                                   propagate_to_related_fields=True):
@@ -312,7 +317,7 @@ class HistoricalRecordGenerator(object):
                 self.user_id in ids_to_skip)
 
     def get_differing_fields(self, data):
-        if self.history_type == '~':
+        if self.history_type == HistoricalRecord.UPDATE:
             diff_fields = get_diff_fields(
                 self.instance, data, self.previous_data,
                 self.history_logging.excluded_fields_names
@@ -333,7 +338,7 @@ class RelatedFieldHistoryGenerator(object):
         self.previous_data = previous_data
 
     def __call__(self):
-        if self.instance_history.history_type == '~':
+        if self.instance_history.history_type == HistoricalRecord.UPDATE:
             fields_to_check = self.instance_history.history_diff
         else:
             fields_to_check = list(self.instance_history.data.keys())
@@ -348,7 +353,10 @@ class RelatedFieldHistoryGenerator(object):
         field = self.instance._meta.get_field(field_name)
         if not field.is_relation:
             return
-        field_value_changed = self.instance_history.history_type in ('~', '-')
+        field_value_changed = (
+            self.instance_history.history_type in (HistoricalRecord.UPDATE,
+                                                   HistoricalRecord.DELETE)
+        )
         get_related_objects = HistoryEnabledRelatedObjectsCollecter(
             self.instance,
             field_name,
@@ -358,7 +366,7 @@ class RelatedFieldHistoryGenerator(object):
         for related_object in related_objects:
             generate_history = HistoricalRecordGenerator(
                 related_object,
-                '~',
+                HistoricalRecord.UPDATE,
                 self.instance_history.history_user_id,
                 self.instance_history.history_user,
                 self.history_logging.get_ignored_users(self.instance),
@@ -381,7 +389,7 @@ class InterestedObjectHistoryGenerator(object):
         for field_name in self.interested_fields:
             field_value_changed = (
                 field_name in self.instance_history.history_diff or
-                self.instance_history.history_type == '-'
+                self.instance_history.history_type == HistoricalRecord.DELETE
             )
             get_related_objects = HistoryEnabledRelatedObjectsCollecter(
                 self.instance,
@@ -417,7 +425,7 @@ class InterestedObjectHistoryGenerator(object):
         )
         HistoricalRecord.objects.create(
             content_object=interested_object,
-            history_type='~',
+            history_type=HistoricalRecord.UPDATE,
             history_user=self.instance_history.history_user,
             history_user_id=self.instance_history.history_user_id,
             data=get_instance_field_data(interested_object),

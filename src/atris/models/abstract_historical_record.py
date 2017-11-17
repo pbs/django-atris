@@ -142,6 +142,17 @@ class HistoricalRecordQuerySet(QuerySet):
 
 
 class AbstractHistoricalRecord(models.Model):
+
+    CREATE = '+'
+    UPDATE = '~'
+    DELETE = '-'
+
+    HISTORY_TYPES = (
+        (CREATE, 'Create'),
+        (UPDATE, 'Update'),
+        (DELETE, 'Delete'),
+    )
+
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField(db_index=True)
     content_object = GenericForeignKey(
@@ -155,11 +166,7 @@ class AbstractHistoricalRecord(models.Model):
     history_user_id = models.PositiveIntegerField(null=True)
     history_type = models.CharField(
         max_length=1,
-        choices=(
-            ('+', 'Create'),
-            ('~', 'Update'),
-            ('-', 'Delete'),
-        ),
+        choices=HISTORY_TYPES,
         db_index=True
     )
     history_diff = ArrayField(models.CharField(max_length=200),
@@ -208,7 +215,7 @@ class AbstractHistoricalRecord(models.Model):
         :rtype String
         """
         diff_string = '{}d '.format(self.get_history_type_display())
-        if self.history_type == '~':
+        if self.history_type == self.UPDATE:
             if not self.history_diff:
                 if not self.previos_version:
                     diff_string = 'No prior information available.'

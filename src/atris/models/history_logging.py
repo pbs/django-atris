@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from copy import copy
 import logging
 from sys import modules
 import threading
@@ -62,6 +63,7 @@ class HistoryLogging(object):
         :type excluded_fields_param_name: str
         """
         self.additional_data_param_name = additional_data_param_name
+        self.class_additional_data_name = ('__' + additional_data_param_name)
         self.excluded_fields_param_name = excluded_fields_param_name
         self.interested_related_fields_param_name = interested_related_fields
         self.ignore_history_for_users_param_name = ignore_history_for_users
@@ -70,13 +72,48 @@ class HistoryLogging(object):
     def contribute_to_class(self, cls, name):
         if cls not in registered_models:
             registered_models[cls] = {
-                'additional_data_param_name': self.additional_data_param_name,
+                'additional_data_param_name': self.class_additional_data_name,
                 'excluded_fields_param_name': self.excluded_fields_param_name
             }
         setattr(cls._meta, 'history_logging', self)
         setattr(cls, name, HistoryManager())
         self.module = cls.__module__
         self.model = cls
+
+    def set_additional_data_properties(self, cls):
+        if self.additional_data_param_name:
+            additional_data_value = getattr(
+                cls, self.additional_data_param_name, dict()
+            )
+            setattr(cls, self.class_additional_data_name,
+                    additional_data_value)
+            setattr(cls, 'default_' + self.additional_data_param_name,
+                    self.default_additional_data_property_maker())
+            setattr(cls, self.additional_data_param_name,
+                    self.additional_data_property_maker())
+
+    def default_additional_data_property_maker(self):
+        class_property_name = '__' + self.additional_data_param_name
+
+        def getter(instance):
+            return getattr(instance, class_property_name)
+
+        return property(fget=getter)
+
+    def additional_data_property_maker(self):
+        class_property_name = '__' + self.additional_data_param_name
+        property_name = '_' + self.additional_data_param_name
+
+        def getter(instance):
+            if not hasattr(instance, property_name):
+                default = getattr(instance, class_property_name)
+                setattr(instance, property_name, copy(default))
+            return getattr(instance, property_name)
+
+        def setter(instance, value):
+            setattr(instance, property_name, value)
+
+        return property(fget=getter, fset=setter)
 
     def set_excluded_fields_names(self, cls):
         self.excluded_fields_names = getattr(

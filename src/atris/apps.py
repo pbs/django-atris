@@ -12,6 +12,7 @@ class AtrisConfig(AppConfig):
             # We have access to all the fields of a Django model only after all
             # models have been loaded.
             history_logger = sender._meta.history_logging
+            history_logger.set_additional_data_properties(sender)
             history_logger.set_excluded_fields_names(sender)
             history_logger.set_interested_related_fields(sender)
             history_logger.register_signal_handlers(sender)

@@ -29,11 +29,8 @@ def test_additional_data_set_to_value_from_instance(poll):
     poll_updated = poll.history.first()
     expected = {'where_from': 'API', 'something_particular': 'Something'}
     assert poll_updated.additional_data == expected
-    # TODO: Remove after fixing Issue#14
-    Poll.additional_data = {'where_from': 'Import'}
 
 
-@mark.skip(reason='Issue#14: default additional_data not immutable')
 @mark.django_db
 def test_default_additional_data_not_modified_when_changing_it_on_the_instance(
         poll):
@@ -41,10 +38,13 @@ def test_default_additional_data_not_modified_when_changing_it_on_the_instance(
     poll.additional_data['where_from'] = 'API'
     poll.additional_data['something_particular'] = 'This is specific'
     # assert
-    assert Poll.additional_data == {'where_from': 'Import'}
+    expected = {'where_from': 'API',
+                'something_particular': 'This is specific'}
+    assert poll.additional_data == expected
+    assert poll.default_additional_data == {'where_from': 'Import'}
+    assert Poll.__additional_data == {'where_from': 'Import'}
 
 
-@mark.skip(reason='Will work when solving Issue#14')
 @mark.django_db
 def test_additiona_data_without_default_can_be_set_on_the_instance(choice):
     # arrange

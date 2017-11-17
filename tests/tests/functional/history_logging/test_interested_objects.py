@@ -42,17 +42,21 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
     actor1_added = episode_cast_history[1]
     actor1_episode_updated = actor1.history.filter(
         history_diff__contains=['episode'],
-        additional_data__episode='Updated Episode'
     )
     assert actor1_episode_updated.count() == 2
     assert actor1_episode_updated[0].related_field_history == actor2_added
+    actor1_additional_data = actor1_episode_updated[0].additional_data
+    assert actor1_additional_data['episode'] == 'Updated Episode'
     assert actor1_episode_updated[1].related_field_history == actor1_added
+    actor1_additional_data = actor1_episode_updated[1].additional_data
+    assert actor1_additional_data['episode'] == 'Added Episode'
     actor2_episode_updated = actor2.history.filter(
         history_diff__contains=['episode'],
-        additional_data__episode='Updated Episode',
         related_field_history=actor2_added
     )
     assert actor2_episode_updated.count() == 1
+    actor2_additional_data = actor2_episode_updated.first().additional_data
+    assert actor2_additional_data['episode'] == 'Added Episode'
 
 
 @mark.django_db
@@ -456,9 +460,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         obj = show()
         obj_history_count = 5
 
-        def expected_data(url):
+        def expected_data(url, title=obj.title):
             result = {'id': str(obj.pk),
-                      'title': 'Another title',
+                      'title': title,
                       'description': '',
                       'links': str(url.pk),
                       'season': '',
@@ -476,9 +480,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         obj = episode(show, writer)
         obj_history_count = 4
 
-        def expected_data(url):
+        def expected_data(url, title=obj.title):
             result = {'id': str(obj.pk),
-                      'title': 'Another title',
+                      'title': title,
                       'description': '',
                       'show': str(show.pk),
                       'season': None,
@@ -502,11 +506,11 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     obj.save()
     # assert
     assert obj.history.count() == obj_history_count
-    link_updated, title_updated = obj.history.all()[:2]
+    title_updated, link_updated = obj.history.all()[:2]
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
     assert title_updated.additional_data == expected_additional_data()
-    assert title_updated.data == expected_data(url)
+    assert title_updated.data == expected_data(url, title='Another title')
     assert link_updated.history_type == '~'
     assert link_updated.history_diff == ['link']
     assert link_updated.additional_data['link'] == 'Updated Link'

@@ -460,9 +460,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         obj = show()
         obj_history_count = 5
 
-        def expected_data(url, title=obj.title):
+        def expected_data(url):
             result = {'id': str(obj.pk),
-                      'title': title,
+                      'title': 'Another title',
                       'description': '',
                       'links': str(url.pk),
                       'season': '',
@@ -480,9 +480,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         obj = episode(show, writer)
         obj_history_count = 4
 
-        def expected_data(url, title=obj.title):
+        def expected_data(url):
             result = {'id': str(obj.pk),
-                      'title': title,
+                      'title': 'Another title',
                       'description': '',
                       'show': str(show.pk),
                       'season': None,
@@ -506,11 +506,11 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     obj.save()
     # assert
     assert obj.history.count() == obj_history_count
-    title_updated, link_updated = obj.history.all()[:2]
+    link_updated, title_updated = obj.history.all()[:2]
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
     assert title_updated.additional_data == expected_additional_data()
-    assert title_updated.data == expected_data(url, title='Another title')
+    assert title_updated.data == expected_data(url)
     assert link_updated.history_type == '~'
     assert link_updated.history_diff == ['link']
     assert link_updated.additional_data['link'] == 'Updated Link'

@@ -79,3 +79,17 @@ def test_history_with_additional_data_not_recorded_if_nothing_changed_on_instanc
     poll.save()
     # assert
     assert poll.history.filter(history_type='~').exists() is False
+
+
+@mark.django_db
+def test_additional_data_of_interested_object_inherited_from_observed_object(
+        show, episode):
+    # act
+    episode.title = 'Another title'
+    episode.additional_data['where_from'] = 'Console'
+    episode.save()
+    # assert
+    episode_update = episode.history.first()
+    assert episode_update.additional_data['where_from'] == 'Console'
+    show_update = show.history.get(related_field_history=episode_update)
+    assert show_update.additional_data['where_from'] == 'Console'

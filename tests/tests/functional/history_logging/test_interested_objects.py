@@ -446,7 +446,7 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
     assert episode_updated.data == expected_data
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
-    assert title_updated.additional_data == dict()
+    assert title_updated.additional_data == {'where_from': 'System'}
     assert title_updated.data == expected_data
 
 
@@ -469,9 +469,6 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                       'specials': ''}
             return result
 
-        def expected_additional_data(**extra_data):
-            return dict(**extra_data)
-
     else:
         from tests.tests.functional.history_logging.conftest import (
             show, writer, episode)
@@ -491,9 +488,6 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                       'co_authors': ''}
             return result
 
-        def expected_additional_data(**extra_data):
-            return dict(where_from='System', **extra_data)
-
     url = Link.objects.create(
         name='PBS link',
         url='http://pbs.org/mercy-street',
@@ -509,7 +503,7 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     link_updated, title_updated = obj.history.all()[:2]
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
-    assert title_updated.additional_data == expected_additional_data()
+    assert title_updated.additional_data == {'where_from': 'System'}
     assert title_updated.data == expected_data(url)
     assert link_updated.history_type == '~'
     assert link_updated.history_diff == ['link']

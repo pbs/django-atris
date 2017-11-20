@@ -58,7 +58,9 @@ class Show(models.Model):
     description = models.CharField(max_length=1000)
     links = GenericRelation('Link')
 
-    history = HistoryLogging()
+    history_additional_data = {'where_from': 'System'}
+    history = HistoryLogging(
+        additional_data_param_name='history_additional_data')
 
 
 class Season(models.Model):

@@ -409,6 +409,7 @@ class InterestedObjectHistoryGenerator(object):
     def generate_history_for_interested_object(self, interested_object,
                                                status, field_changed):
         additional_data = get_additional_data(interested_object)
+        additional_data.update(self.instance_history.additional_data)
         instance_class_name = self.instance.__class__.__name__
         instance_name = instance_class_name.lower()
         if (field_changed and

@@ -93,10 +93,23 @@ class Episode(models.Model):
 
     additional_data = {'where_from': 'System'}
     interested_related_fields = ['show', 'cast', 'author']
+    excluded_fields = ['episode2']
     history = HistoryLogging(
+        excluded_fields_param_name='excluded_fields',
         additional_data_param_name='additional_data',
         interested_related_fields='interested_related_fields'
     )
+
+
+class Episode2(Episode):
+
+    groups = models.ManyToManyField(Group, related_name='episodes')
+
+
+class Special(Episode):
+
+    class Meta:
+        proxy = True
 
 
 class Link(models.Model):

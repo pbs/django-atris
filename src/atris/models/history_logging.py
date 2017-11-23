@@ -178,9 +178,10 @@ def find_m2m_field_name_by_model(in_model_meta, for_model, reverse_m2m):
     if reverse_m2m:
         fields = in_model_meta.related_objects
     else:
-        fields = in_model_meta.local_many_to_many
+        fields = in_model_meta.many_to_many
     for field in fields:
-        if field.related_model == for_model:
+        target_models = [for_model] + [p for p in for_model._meta.parents]
+        if field.many_to_many and field.related_model in target_models:
             return field.name
 
 

@@ -28,12 +28,7 @@ def get_instance_field_data(instance):
         name = field.name
         if name in instance_meta.history_logging.excluded_fields_names:
             continue
-        if hasattr(field, 'attname'):  # regular field or foreign key
-            attname = field.attname
-        elif hasattr(field, 'get_accessor_name'):  # many-to-* relation feild
-            attname = field.get_accessor_name()
-        elif hasattr(field, 'fk_field'):  # generic foreign key
-            attname = field.fk_field
+        attname = get_attribute_name_from_field(field)
         try:
             value = getattr(instance, attname)
         except ObjectDoesNotExist:
@@ -46,6 +41,20 @@ def get_instance_field_data(instance):
         else:
             data[name] = str(value) if value is not None else None
     return data
+
+
+def get_attribute_name_from_field(field, flat_fk=True):
+    accessor_for_simple_fields = 'attname' if flat_fk else 'name'
+    if hasattr(field, 'fk_field'):  # generic foreign key
+        attname = field.fk_field
+    elif hasattr(field, 'get_accessor_name'):  # many-to-* relation field
+        attname = field.get_accessor_name()
+    elif hasattr(field, accessor_for_simple_fields):
+        # regular field or foreign key
+        attname = getattr(field, accessor_for_simple_fields)
+    else:
+        raise TypeError("Can't determine accessor for field {}".format(field))
+    return attname
 
 
 def from_writable_db(manager):

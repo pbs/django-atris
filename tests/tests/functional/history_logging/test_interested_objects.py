@@ -42,17 +42,21 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
     actor1_added = episode_cast_history[1]
     actor1_episode_updated = actor1.history.filter(
         history_diff__contains=['episode'],
-        additional_data__episode='Updated Episode'
     )
     assert actor1_episode_updated.count() == 2
     assert actor1_episode_updated[0].related_field_history == actor2_added
+    actor1_additional_data = actor1_episode_updated[0].additional_data
+    assert actor1_additional_data['episode'] == 'Updated Episode'
     assert actor1_episode_updated[1].related_field_history == actor1_added
+    actor1_additional_data = actor1_episode_updated[1].additional_data
+    assert actor1_additional_data['episode'] == 'Added Episode'
     actor2_episode_updated = actor2.history.filter(
         history_diff__contains=['episode'],
-        additional_data__episode='Updated Episode',
         related_field_history=actor2_added
     )
     assert actor2_episode_updated.count() == 1
+    actor2_additional_data = actor2_episode_updated.first().additional_data
+    assert actor2_additional_data['episode'] == 'Added Episode'
 
 
 @mark.django_db
@@ -68,11 +72,11 @@ def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_
     actor1_updated = actor1.history.first()
     assert actor1_updated.related_field_history == episode_cast_history
     assert actor1_updated.history_diff == ['episode']
-    assert actor1_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor1_updated.additional_data['episode'] == 'Added Episode'
     actor2_updated = actor2.history.first()
     assert actor2_updated.related_field_history == episode_cast_history
     assert actor2_updated.history_diff == ['episode']
-    assert actor2_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor2_updated.additional_data['episode'] == 'Added Episode'
 
 
 @mark.django_db
@@ -89,11 +93,11 @@ def test_setting_values_for_an_m2m_field_triggers_related_history_for_previous_i
     actor1_updated = actor1.history.first()
     assert actor1_updated.related_field_history == episode_cast_history
     assert actor1_updated.history_diff == ['episode']
-    assert actor1_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor1_updated.additional_data['episode'] == 'Removed Episode'
     actor2_updated = actor2.history.first()
     assert actor2_updated.related_field_history == episode_cast_history
     assert actor2_updated.history_diff == ['episode']
-    assert actor2_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor2_updated.additional_data['episode'] == 'Removed Episode'
 
 
 @mark.django_db
@@ -130,7 +134,7 @@ def test_removing_values_from_an_m2m_field_triggers_related_history_for_all_item
     actor1_updated = actor1.history.first()
     assert actor1_updated.related_field_history == episode_cast_history
     assert actor1_updated.history_diff == ['episode']
-    assert actor1_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor1_updated.additional_data['episode'] == 'Removed Episode'
     actor2_updated = actor2.history.first()
     assert actor2_updated.related_field_history == episode_cast_history
     assert actor2_updated.history_diff == ['episode']
@@ -152,11 +156,11 @@ def test_clearing_items_from_m2m_field_triggers_related_history_for_all_items(
     actor1_updated = actor1.history.first()
     assert actor1_updated.related_field_history == episode_cast_history
     assert actor1_updated.history_diff == ['episode']
-    assert actor1_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor1_updated.additional_data['episode'] == 'Removed Episode'
     actor2_updated = actor2.history.first()
     assert actor2_updated.related_field_history == episode_cast_history
     assert actor2_updated.history_diff == ['episode']
-    assert actor2_updated.additional_data['episode'] == 'Updated Episode'
+    assert actor2_updated.additional_data['episode'] == 'Removed Episode'
 
 
 @mark.django_db
@@ -168,6 +172,7 @@ def test_updating_attributes_for_observed_object_triggers_related_history_for_al
     episode.cast.add(actor1, actor2)
     # act
     episode.description = 'Lisette draws the face of a soldier...'
+    episode.save()
     # assert
     episode_update_history = episode.history.first()
     show_updated = show.history.first()
@@ -283,7 +288,6 @@ def test_related_history_not_created_for_objects_not_added_in_interested_fields(
     assert Episode.history.filter(object_id=episode_id).count() == 3
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_history_generated_for_previous_interested_object_when_removed_from_observed_object(  # noqa
         show, episode):
@@ -300,7 +304,6 @@ def test_history_generated_for_previous_interested_object_when_removed_from_obse
     assert show_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_observed_object_removal_will_override_regular_update_message(
         show, episode):
@@ -318,7 +321,6 @@ def test_observed_object_removal_will_override_regular_update_message(
     assert show_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_history_generated_for_new_interested_object_when_set_on_existing_episode(  # noqa
         show, episode):
@@ -335,7 +337,6 @@ def test_history_generated_for_new_interested_object_when_set_on_existing_episod
     assert next_show_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_moving_observed_object_to_another_interested_object_will_override_regular_update_message(  # noqa
         show, episode):
@@ -353,7 +354,6 @@ def test_moving_observed_object_to_another_interested_object_will_override_regul
     assert next_show_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_history_generated_for_interested_m2m_object_when_observed_object_removed(  # noqa
         show, episode):
@@ -376,7 +376,6 @@ def test_history_generated_for_interested_m2m_object_when_observed_object_remove
     assert actor2_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_history_generated_for_interested_m2m_object_when_observed_object_added(  # noqa
         show, episode):
@@ -399,7 +398,6 @@ def test_history_generated_for_interested_m2m_object_when_observed_object_added(
     assert actor2_updated.related_field_history == episode.history.first()
 
 
-@mark.skip(reason='Issue#16')
 @mark.django_db
 def test_history_generated_for_interested_object_referenced_by_generic_field(
         show):

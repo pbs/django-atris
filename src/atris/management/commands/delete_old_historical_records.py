@@ -2,7 +2,7 @@ import logging
 
 from django.core.management import BaseCommand
 
-from atris.models import get_history_model
+from atris.models import get_history_model, ArchivedHistoricalRecord
 
 logger = logging.getLogger('old_history_deleting')
 HistoricalRecord = get_history_model()
@@ -33,6 +33,14 @@ class Command(BaseCommand):
             help='Any historical record older than the number of months '
                  'specified gets deleted.'
         )
+        parser.add_argument(
+            '--from-archive',
+            dest='from_archive',
+            default=False,
+            action='store_true',
+            help='Delete occurs on the "archived historical records" table '
+                 'instead of the default "historical records" table.'
+        )
 
     def handle(self, *args, **options):
         days = options.get('days')
@@ -42,7 +50,9 @@ class Command(BaseCommand):
                 msg=self.PARAM_ERROR,
             ))
             return
-        old_history_entries = HistoricalRecord.objects.older_than(days, weeks)
-        handled_entries_nr = old_history_entries.count()
-        old_history_entries.delete()
-        self.stdout.write('{} deleted.\n'.format(handled_entries_nr))
+
+        model = ArchivedHistoricalRecord if options.get('from_archive') \
+            else HistoricalRecord
+        deleted_entries = model.objects.older_than(days, weeks).delete()
+        self.stdout.write('{} {} deleted.\n'.format(
+            deleted_entries[0], model.__name__))

@@ -353,6 +353,9 @@ class InterestedObjectHistoryGenerator(object):
             )
             interested_objects = get_related_objects()
             for interested_object in interested_objects:
+                # Register any changes to the interested object before the
+                # observed object notification is logged into history.
+                fake_save(interested_object)
                 self.generate_history_for_interested_object(interested_object)
 
     def generate_history_for_interested_object(self, interested_object):

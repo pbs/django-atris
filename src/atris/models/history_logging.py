@@ -39,6 +39,7 @@ class HistoryManager(object):
 class HistoryLogging(object):
 
     thread = threading.local()
+    _cleared_related_objects = dict()
 
     def __init__(self, additional_data_param_name='',
                  excluded_fields_param_name='',
@@ -96,7 +97,8 @@ class HistoryLogging(object):
         get_m2m_through_classes = M2MThroughClassesGatherer(sender)
         through_classes = get_m2m_through_classes()
         for through_class in through_classes:
-            m2m_changed.connect(self.m2m_changed, sender=through_class)
+            m2m_changed.connect(self.m2m_changed, sender=through_class,
+                                weak=False)
 
     def post_save(self, instance, created=True, raw=False, **kwargs):
         if not raw:
@@ -106,12 +108,29 @@ class HistoryLogging(object):
         self._create_historical_record(instance, '-')
 
     def m2m_changed(self, instance, action, reverse, model, pk_set, **kwargs):
-        if not hasattr(instance._meta, 'history_logging'):
-            return
-        if action.startswith('post'):
+        only_related_model_tracks_history = (
+            not hasattr(instance._meta, 'history_logging') and
+            hasattr(model._meta, 'history_logging')
+        )
+        if only_related_model_tracks_history:
+            if action in ('post_add', 'post_remove'):
+                for related_object in model.objects.filter(pk__in=pk_set):
+                    self._create_historical_record(related_object, '~')
+            elif action == 'pre_clear':
+                field_name = find_m2m_field_name_by_model(
+                    instance._meta, model, reverse)
+                related_objects = getattr(instance, field_name).all()
+                self._cleared_related_objects[instance] = list(related_objects)
+            elif (action == 'post_clear' and
+                  instance in self._cleared_related_objects):
+                related_objects = self._cleared_related_objects.pop(instance)
+                for related_object in related_objects:
+                    self._create_historical_record(related_object, '~', False)
+        elif action.startswith('post'):
             self._create_historical_record(instance, '~')
 
-    def _create_historical_record(self, instance, history_type):
+    def _create_historical_record(self, instance, history_type,
+                                  propagate_to_related_fields=True):
         history_user = self.get_history_user(instance)
         history_user_id, history_user_name = get_history_user_id_and_name(
             history_user)
@@ -120,7 +139,8 @@ class HistoryLogging(object):
             history_type,
             history_user_id,
             history_user_name,
-            self.get_ignored_users(instance)
+            self.get_ignored_users(instance),
+            propagate_to_related_fields
         )
         generate_history()
 
@@ -152,6 +172,16 @@ def get_history_user_id_and_name(user):
         if user else None
     )
     return user.id, history_user
+
+
+def find_m2m_field_name_by_model(in_model_meta, for_model, reverse_m2m):
+    if reverse_m2m:
+        fields = in_model_meta.related_objects
+    else:
+        fields = in_model_meta.local_many_to_many
+    for field in fields:
+        if field.related_model == for_model:
+            return field.name
 
 
 class M2MThroughClassesGatherer(object):

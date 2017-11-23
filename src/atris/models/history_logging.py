@@ -265,7 +265,8 @@ def is_str(obj):
 class HistoricalRecordGenerator(object):
 
     def __init__(self, instance, history_type, user_id, user_name,
-                 ignored_users=None, propagate_to_related_fields=True):
+                 ignored_users=None, propagate_to_related_fields=True,
+                 extra_info=None):
         self.instance = instance
         self.previous_data = getattr(
             from_writable_db(self.instance.history).first(), 'data', None)
@@ -275,6 +276,7 @@ class HistoricalRecordGenerator(object):
         self.user_name = user_name
         self.ignored_users = ignored_users if ignored_users else {}
         self.propagate_to_related_fields = propagate_to_related_fields
+        self.extra_info = extra_info
 
     def __call__(self):
         if self.should_skip_history_for_user():
@@ -287,6 +289,9 @@ class HistoricalRecordGenerator(object):
         diff_fields, should_generate_history = self.get_differing_fields(data)
         if not should_generate_history:
             return
+        additional_data = get_additional_data(self.instance)
+        if self.extra_info:
+            additional_data.update(self.extra_info)
         instance_history = HistoricalRecord.objects.create(
             content_object=self.instance,
             history_type=self.history_type,
@@ -294,7 +299,7 @@ class HistoricalRecordGenerator(object):
             history_user_id=self.user_id,
             data=data,
             history_diff=diff_fields,
-            additional_data=get_additional_data(self.instance)
+            additional_data=additional_data
         )
         if self.propagate_to_related_fields:
             generate_for_related_fields = RelatedFieldHistoryGenerator(
@@ -371,7 +376,8 @@ class RelatedFieldHistoryGenerator(object):
                 self.instance_history.history_user,
                 self.history_logging.get_ignored_users(self.instance),
                 # prevent infinite generation of history among related fields.
-                propagate_to_related_fields=False
+                propagate_to_related_fields=False,
+                extra_info=self.instance_history.additional_data
             )
             generate_history()
 

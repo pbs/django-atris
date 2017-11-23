@@ -68,7 +68,7 @@ class Season(models.Model):
     description = models.CharField(max_length=1000)
     show = models.ForeignKey(Show)
 
-    history = HistoryLogging()
+    history = HistoryLogging(additional_data_param_name='additional_data')
 
 
 class Actor(models.Model):
@@ -106,6 +106,13 @@ class Episode(models.Model):
 class Episode2(Episode):
 
     groups = models.ManyToManyField(Group, related_name='episodes')
+
+    additional_data = {'where_from': 'System'}
+    interested_related_fields = ['show', 'cast', 'author']
+    history = HistoryLogging(
+        additional_data_param_name='additional_data',
+        interested_related_fields='interested_related_fields'
+    )
 
 
 class Special(Episode):

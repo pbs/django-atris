@@ -2,7 +2,9 @@ from pytest import mark
 
 from atris.models import HistoryLogging
 
-from tests.models import Show, Actor, Writer, Link, Voter, Group, Admin
+from tests.models import (
+    Show, Actor, Writer, Link, Voter, Group, Admin, Season, Episode, Episode2
+)
 
 
 @mark.django_db
@@ -366,3 +368,63 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
     assert group3_cleared.history_type == '~'
     assert group3_cleared.history_diff == ['admins']
     assert group3_cleared.data['admins'] == ''
+
+
+@mark.django_db
+def test_additional_data_from_initialy_changed_instance_copied_to_history_of_fk_field(  # noqa
+        show):
+    # arrange
+    season = Season(title='S1', description='', show=show)
+    season.additional_data = {'where_from': 'Console', 'smth': 'Abc'}
+    # act
+    season.save()
+    # assert
+    show_updated_with_season = show.history.first()
+    assert show_updated_with_season.history_type == '~'
+    assert show_updated_with_season.history_diff == ['season']
+    expected = {'where_from': 'Console', 'smth': 'Abc'}
+    assert show_updated_with_season.additional_data == expected
+
+
+@mark.django_db
+def test_additional_data_from_initialy_changed_instance_copied_to_history_of_1_to_1_field(  # noqa
+        writer, show):
+    # arrange
+    episode = Episode(title='Episode1',
+                      description='',
+                      show=show,
+                      author=writer)
+    episode.additional_data['where_from'] = 'API'
+    episode.additional_data['smth'] = 'Some new information'
+    # act
+    episode.save()
+    # assert
+    writer_update_with_work = writer.history.get(
+        history_type='~',
+        history_diff__contains=['work'],
+        data__work=str(episode.pk)
+    )
+    expected = {'where_from': 'API', 'smth': 'Some new information'}
+    assert writer_update_with_work.additional_data == expected
+
+
+@mark.django_db
+def test_additional_data_from_initialy_changed_instance_copied_to_history_of_many_to_many_field(  # noqa
+        writer):
+    # arrange
+    episode2 = Episode2.objects.create(title='Episode2',
+                                       description='',
+                                       author=writer)
+    group = Group.objects.create(name='group1')
+    episode2.additional_data = {'where_from': 'Space',
+                                'message': 'We come in peace!'}
+    # act
+    episode2.groups.add(group)
+    # assert
+    group_update_with_episode = group.history.get(
+        history_type='~',
+        history_diff__contains=['episodes'],
+        data__episodes=str(episode2.pk)
+    )
+    expected = {'where_from': 'Space', 'message': 'We come in peace!'}
+    assert group_update_with_episode.additional_data == expected

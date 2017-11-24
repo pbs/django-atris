@@ -113,7 +113,7 @@ class ModelHistoryCreator(object):
         }
         historical_record = HistoricalRecord(
             history_user=None,
-            history_type='+',
+            history_type=HistoricalRecord.CREATE,
             content_object=obj,
             data=data,
             additional_data=additional_data

@@ -23,8 +23,14 @@ logger = logging.getLogger(__name__)
 HistoricalRecord = get_history_model()
 
 
-def fake_save(obj):
-    obj._meta.history_logging.post_save(obj, created=False)
+def fake_save(obj, created=False):
+    """
+    Trigger the signal that will generate History for the given object.
+    Useful when a change on an untracked object does not generate history on a
+    related tracked object or when using bulk_create, which does not trigger
+    the pre/post_save signals by default.
+    """
+    obj._meta.history_logging.post_save(obj, created=created)
 
 
 class HistoryManager(object):

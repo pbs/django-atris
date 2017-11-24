@@ -344,7 +344,9 @@ class RelatedFieldHistoryGenerator(object):
 
     def __call__(self):
         if self.instance_history.history_type == HistoricalRecord.UPDATE:
-            fields_to_check = self.instance_history.history_diff
+            # Make sure the fields_to_check is a list in case history_diff is
+            # None.
+            fields_to_check = self.instance_history.history_diff or []
         else:
             fields_to_check = list(self.instance_history.data.keys())
         fields_to_check += self.history_logging.excluded_fields_names

@@ -91,28 +91,41 @@ class HistoryLogging(object):
             additional_data_value = getattr(
                 cls, self.additional_data_param_name, dict()
             )
+            class_name = cls.__name__
             setattr(cls, self.class_additional_data_name,
                     additional_data_value)
-            setattr(cls, 'default_' + self.additional_data_param_name,
+            logger.debug('Set class attribute {}.{}'
+                         .format(class_name, self.class_additional_data_name))
+            default_data_param_name = ('default_' +
+                                       self.additional_data_param_name)
+            setattr(cls, default_data_param_name,
                     self.default_additional_data_property_maker())
+            logger.debug('Set property {}.{}'
+                         .format(class_name, default_data_param_name))
             setattr(cls, self.additional_data_param_name,
                     self.additional_data_property_maker())
+            logger.debug('Set property {}.{}'
+                         .format(class_name, self.additional_data_param_name))
 
     def default_additional_data_property_maker(self):
-        class_property_name = '__' + self.additional_data_param_name
 
         def getter(instance):
-            return getattr(instance, class_property_name)
+            return getattr(instance, self.class_additional_data_name)
 
         return property(fget=getter)
 
     def additional_data_property_maker(self):
-        class_property_name = '__' + self.additional_data_param_name
         property_name = '_' + self.additional_data_param_name
 
         def getter(instance):
             if not hasattr(instance, property_name):
-                default = getattr(instance, class_property_name)
+                logger.debug(
+                    '{} not defined on {}. Getting class default from '
+                    'property: {}'.format(property_name,
+                                          instance.__class__.__name__,
+                                          self.class_additional_data_name)
+                )
+                default = getattr(instance, self.class_additional_data_name)
                 setattr(instance, property_name, copy(default))
             return getattr(instance, property_name)
 

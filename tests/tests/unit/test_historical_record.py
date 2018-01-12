@@ -178,7 +178,7 @@ class TestHistoryLoggingOrdering():
 
     def test_model_instance_history_is_ordered_by_history_date(
             self, db, history_setup):
-        poll = Poll(id=1, question='Test', pub_date=datetime.now())
+        poll = Poll(custom_id=1, question='Test', pub_date=datetime.now())
         choice = Choice(id=14, poll=poll, choice='a', votes=0)
         expected_choice_history = [history_setup[5], history_setup[2]]
         assert list(choice.history.all()) == expected_choice_history

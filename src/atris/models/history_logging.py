@@ -37,7 +37,7 @@ class HistoryManager(object):
     def __get__(self, instance, model):
         if instance and model:
             return HistoricalRecord.objects.by_model_and_model_id(model,
-                                                                  instance.id)
+                                                                  instance.pk)
         if model:
             return HistoricalRecord.objects.by_model(model)
 
@@ -528,7 +528,7 @@ class HistoryEnabledRelatedObjectsCollecter(object):
             return list()
         previous_data = self.previous_data.get(self.field_name, None) or ''
         previous_pks = previous_data.split(', ')
-        return [int(pk) for pk in previous_pks if pk != '']
+        return [pk for pk in previous_pks if pk != '']
 
     def aggregate_related_objects(self, related_objects, previous_objects):
         current_objects = set(related_objects)

@@ -24,10 +24,10 @@ def test_history_not_recorded_for_untracked_models(voter):
 
 @mark.django_db
 def test_history_create_for_tracked_models(poll, choice, voter):
-    assert choice.id == choice.history.last().object_id
+    assert str(choice.pk) == choice.history.last().object_id
     assert choice.history.last().history_type == '+'
     assert choice.history.last().data['poll'] == str(choice.poll_id)
-    assert poll.history.last().object_id == poll.id
+    assert poll.history.last().object_id == str(poll.pk)
     assert poll.history.last().history_type == '+'
     assert poll.history.last().data['question'] == poll.question
 
@@ -82,7 +82,7 @@ def test_updating_related_fields_recorded_for_model(choice, voter):
 @mark.django_db
 def test_history_delete_for_tracked_models(poll):
     # arrange
-    poll_id = poll.id
+    poll_id = poll.pk
     # act
     poll.delete()
     # assert

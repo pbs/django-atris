@@ -19,6 +19,6 @@ def test_excluded_fields_are_absent(poll, choice):
     # excluded.
     assert poll.history.count() == 2
     modified_question, poll_created = poll.history.all()
-    expected_fields = {'question', 'pub_date', 'id'}
+    expected_fields = {'question', 'pub_date', 'custom_id'}
     assert set(modified_question.data.keys()) == expected_fields
     assert set(poll_created.data.keys()) == expected_fields

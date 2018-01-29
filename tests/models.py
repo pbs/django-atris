@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.contenttypes.fields import (
     ContentType, GenericRelation, GenericForeignKey
 )
@@ -7,6 +8,7 @@ from atris.models import HistoryLogging
 
 
 class Poll(models.Model):
+    custom_id = models.AutoField(verbose_name='ID', primary_key=True)
     question = models.CharField(max_length=200)
     pub_date = models.DateTimeField('date published')
     updated_on = models.DateTimeField(auto_now=True)
@@ -37,6 +39,8 @@ class Choice(models.Model):
 
 
 class Admin(models.Model):
+    uuid = models.UUIDField(verbose_name='ID', primary_key=True,
+                            default=uuid.uuid4)
     name = models.CharField(max_length=200)
 
 
@@ -48,6 +52,8 @@ class Group(models.Model):
 
 
 class Voter(models.Model):
+    id = models.UUIDField(verbose_name='ID', primary_key=True,
+                          default=uuid.uuid4)
     choice = models.ForeignKey(Choice, related_name='voters')
     name = models.CharField(max_length=200)
     groups = models.ManyToManyField(Group, related_name='voters')
@@ -78,6 +84,8 @@ class Actor(models.Model):
 
 
 class Writer(models.Model):
+    cid = models.UUIDField(verbose_name='ID', primary_key=True,
+                           default=uuid.uuid4)
     name = models.CharField(max_length=100)
 
     excluded_fields = ['contributions']

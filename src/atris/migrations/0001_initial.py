@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import django.contrib.postgres.fields.hstore
 from django.contrib.postgres.operations import HStoreExtension
+import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
@@ -25,7 +26,7 @@ class Migration(migrations.Migration):
                 ('history_type', models.CharField(max_length=1, choices=[('+', 'Create'), ('~', 'Update'), ('-', 'Delete')])),
                 ('data', django.contrib.postgres.fields.hstore.HStoreField()),
                 ('additional_data', django.contrib.postgres.fields.hstore.HStoreField(null=True)),
-                ('content_type', models.ForeignKey(to='contenttypes.ContentType')),
+                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.ContentType')),
             ],
             options={
                 'ordering': ['-history_date'],

@@ -14,7 +14,7 @@ def test_initial_populate():
     Poll.objects.create(question="Will this populate?", pub_date=now())
     Poll.history.delete()
     # act
-    management.call_command('populate_initial_history', auto=True)
+    management.call_command('populate_initial_history')
     # assert
     assert Poll.history.count() == 1
 

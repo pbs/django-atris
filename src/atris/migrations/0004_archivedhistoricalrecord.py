@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import django.contrib.postgres.fields
 import django.contrib.postgres.fields.hstore
+import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
@@ -26,7 +27,7 @@ class Migration(migrations.Migration):
                 ('history_diff', django.contrib.postgres.fields.ArrayField(size=None, null=True, base_field=models.CharField(max_length=200), blank=True)),
                 ('data', django.contrib.postgres.fields.hstore.HStoreField()),
                 ('additional_data', django.contrib.postgres.fields.hstore.HStoreField(null=True)),
-                ('content_type', models.ForeignKey(to='contenttypes.ContentType')),
+                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.ContentType')),
             ],
             options={
                 'ordering': ['-history_date'],

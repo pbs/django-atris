@@ -153,7 +153,10 @@ class AbstractHistoricalRecord(models.Model):
         (DELETE, 'Delete'),
     )
 
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+    )
     object_id = models.TextField(db_index=True)
     content_object = GenericForeignKey(
         'content_type',
@@ -175,8 +178,8 @@ class AbstractHistoricalRecord(models.Model):
     data = JSONField()
     related_field_history = models.ForeignKey(
         'self',
-        related_name='referenced_objects_history',
         on_delete=models.CASCADE,
+        related_name='referenced_objects_history',
         null=True,
         blank=True
     )

@@ -25,7 +25,11 @@ class Poll(models.Model):
 
 
 class Choice(models.Model):
-    poll = models.ForeignKey(Poll, related_name='choices')
+    poll = models.ForeignKey(
+        Poll,
+        on_delete=models.CASCADE,
+        related_name='choices'
+    )
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
 
@@ -54,7 +58,11 @@ class Group(models.Model):
 class Voter(models.Model):
     id = models.UUIDField(verbose_name='ID', primary_key=True,
                           default=uuid.uuid4)
-    choice = models.ForeignKey(Choice, related_name='voters')
+    choice = models.ForeignKey(
+        Choice,
+        on_delete=models.CASCADE,
+        related_name='voters',
+    )
     name = models.CharField(max_length=200)
     groups = models.ManyToManyField(Group, related_name='voters')
 
@@ -72,7 +80,7 @@ class Show(models.Model):
 class Season(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
-    show = models.ForeignKey(Show)
+    show = models.ForeignKey(Show, on_delete=models.CASCADE)
 
     history = HistoryLogging(additional_data_param_name='additional_data')
 
@@ -95,10 +103,23 @@ class Writer(models.Model):
 class Episode(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
-    show = models.ForeignKey(Show, null=True, related_name='specials')
-    season = models.ForeignKey(Season, null=True)
+    show = models.ForeignKey(
+        Show,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='specials',
+    )
+    season = models.ForeignKey(
+        Season,
+        on_delete=models.CASCADE,
+        null=True,
+    )
     cast = models.ManyToManyField(Actor, related_name='filmography')
-    author = models.OneToOneField(Writer, related_name='work')
+    author = models.OneToOneField(
+        Writer,
+        on_delete=models.CASCADE,
+        related_name='work',
+    )
     co_authors = models.ManyToManyField(Writer, related_name='contributions')
 
     additional_data = {'where_from': 'System'}
@@ -133,7 +154,7 @@ class Link(models.Model):
     name = models.CharField(max_length=100)
     url = models.CharField(max_length=256)
     object_id = models.PositiveIntegerField()
-    content_type = models.ForeignKey(ContentType)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     related_object = GenericForeignKey('content_type', 'object_id')
 
     interested_related_fields = ['related_object']

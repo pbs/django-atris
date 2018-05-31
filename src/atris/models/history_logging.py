@@ -215,7 +215,7 @@ class HistoryLogging(object):
         specified by the `history_user_param_name` init variable.
         """
         try:
-            if self.thread.request.user.is_authenticated():
+            if self.thread.request.user.is_authenticated:
                 return self.thread.request.user
         except AttributeError:
             return getattr(instance, 'history_user', None)

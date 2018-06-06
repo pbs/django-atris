@@ -108,7 +108,8 @@ class GenericHistoryAdmin(admin.ModelAdmin):
         # `related_field_history_admin`
         self._request = request
         qs = super(GenericHistoryAdmin, self).get_queryset(request)
-        return qs._clone(klass=ApproxCountPgQuerySet)
+        # TODO Make use of `ApproxCountPgQuerySet` in admin's QuerySet.
+        return qs
 
     def history_snapshot(self, obj):
         return self._dict_to_table(obj.data)

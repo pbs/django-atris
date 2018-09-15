@@ -7,6 +7,7 @@ update/delete operations.
 Snapshots are available in a global form as well.
 
 This app requires:
+
    - Django>=1.10:
         - for Django < 1.9      please use django-atris <1.0.0
         - for Django < 1.10     please use django-atris <1.2.0
@@ -18,12 +19,14 @@ Integration guide
 -----------------
 
 In order to use the app you must do the following:
+
  * Add 'atris' to INSTALLED_APPS in settings
  * You MUST have 'django.contrib.postgres' in your INSTALLED_APPS
  * Add 'atris.middleware.LoggingRequestMiddleware' to MIDDLEWARE in order for the app to be able to get the user which made the changes
  * Put a field (named as you wish) in the model class that you desire to track that contains a HistoryLogging instance (i.e. history = HistoryLogging() )
 
 Additional features:
+
    - Additional data -
                        if you wish to store some additional data regarding
                        an instance of your model, you can do so by adding a
@@ -32,7 +35,7 @@ Additional features:
                        HistoryLogging field::
 
                             additional_data = {'changed_from':'djadmin'}
-                            history = HistoryLogging(additional_data='additional_data')
+                            history = HistoryLogging(additional_data_param_name='additional_data')
 
    - Exclude fields -
                       if you wish not to track some fields, all you need to do
@@ -41,7 +44,7 @@ Additional features:
                       when instantiating the HistoryLogging field::
 
                            exclude_fields = ['last_modified'] # as it would always appear to have been updated
-                           history = HistoryLogging(exclude_fields='exclude_fields')
+                           history = HistoryLogging(excluded_fields_param_name='exclude_fields')
 
    - Ignore changes by user -
                       if you wish not to track changes made by a specific user,
@@ -55,7 +58,7 @@ Additional features:
                            history = HistoryLogging(ignore_history_for_users='ignore_history_for_users')
 
    - Interested related fields -
-                       *(added in version 1.1.0)*
+                       **(added in version 1.1.0)**
                        
                        if you wish to add history for the objects related to a model
                        when the model changes, you can do so by declaring a list with the names of
@@ -73,6 +76,7 @@ Usage guide
 After integrating the app in your own app, you can make use of it in several different ways.
 
 For starters, the fields made available to you when inspecting a history instance are the following:
+
     * content_type = django contenttype
     * object_id = the model instance id that the history is kept of
     * history_date = the date that the history instance was created
@@ -81,8 +85,10 @@ For starters, the fields made available to you when inspecting a history instanc
     * history_type = type of history, +: Create, ~: Update, -:Delete (the method 'get_history_type_display()' gets you the string interpretation)
     * data = JSON field, contains a snapshot (in the form of a dict) of the model instance that the history is being kept of, doesn't contain excluded fields nor additional data fields.
       All field values are converted to strings. The values of foreign keys are represented by the object ID as a string. The values of ManyoManyFilds are represented by a string
-      containing a comma-sparated list of IDs. **(New in version 1.1.0: changed key of ForeignKey fields from <FK_FIELD_NAME>_id to <FK_FIELD_NAME>; added entry for many-to-many field)**
-    * additional_data = hstore field, contains additional data of the model instance in the form of a dict
+      containing a comma-sparated list of IDs.
+
+        **New in version 1.1.0: changed key of ForeignKey fields from <FK_FIELD_NAME>_id to <FK_FIELD_NAME>; added entry for many-to-many field**
+    * additional_data = JSON field, contains additional data of the model instance in the form of a dict
 
 **NOTE #1**: A historical record will be generated only if there has been a change in the local model fields. *(New in version 1.1.0)*
 
@@ -90,6 +96,7 @@ For starters, the fields made available to you when inspecting a history instanc
 settings.py via `ATRIS_HISTORY_MODEL` as `<APP_NAME>.<MODEL_NAME>`. *(New in version 1.1.0)*
 
 Example of usage in code:
+
 * Classes we will use in example::
 
     >>> class Foo(models.Model):
@@ -183,4 +190,21 @@ Example of usage in code:
     >>> bar.save()
     >>> bar.history.filter(history_user='ignore_user').count()
     0
+
+
+
+Changelog
+-----------
+
+1.2.2:
+    * Django 1.10 compatible
+
+1.3.0:
+    * Django 2 compatible
+
+1.3.1:
+    * suppress approximate count. TODO
+
+1.3.2:
+    * Django 2.1 compatible
 

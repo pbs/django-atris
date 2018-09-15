@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import (
     ContentType, GenericRelation, GenericForeignKey
 )
 from django.db import models
+from django.utils.translation import ugettext_lazy as _
 
 from atris.models import HistoryLogging
 
@@ -10,7 +11,7 @@ from atris.models import HistoryLogging
 class Poll(models.Model):
     custom_id = models.AutoField(verbose_name='ID', primary_key=True)
     question = models.CharField(max_length=200)
-    pub_date = models.DateTimeField('date published')
+    pub_date = models.DateTimeField(_('date published'))
     updated_on = models.DateTimeField(auto_now=True)
 
     excluded_fields = ['updated_on', 'choices']

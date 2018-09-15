@@ -241,6 +241,6 @@ class AbstractHistoricalRecord(models.Model):
         except FieldDoesNotExist:
             return field_name.replace('_', ' ').title()
         if hasattr(field, 'verbose_name'):
-            return field.verbose_name
+            return str(field.verbose_name)
         else:
             return field.name.replace('_', ' ').title()

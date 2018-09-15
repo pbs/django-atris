@@ -208,3 +208,5 @@ Changelog
 1.3.2:
     * Django 2.1 compatible
 
+1.3.3:
+    * Evaluate translation lazy translation text for a field's verbose name

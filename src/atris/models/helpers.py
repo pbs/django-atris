@@ -32,8 +32,7 @@ def diff_is_fake(data, prev_data, diff_fields):
     it means it's a false diff.
     """
     for field_name in diff_fields:
-        value = data[field_name]
-        id_list = re.match(r'^(\d+,\s)+\d+$', value)
+        id_list = re.match(r'^(\d+,\s)+\d+$', data[field_name] or '')
         if not id_list:
             return False
         else:

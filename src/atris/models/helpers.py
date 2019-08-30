@@ -4,8 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
 
 
-def get_diff_fields(model, data, previous_data, excluded_fields_names,
-                    check_fake=True):
+def get_diff_fields(model, data, previous_data, excluded_fields_names):
     """
     Returns the fields of `data` for which the values differ in
     `previous_data`. The fields that are given in `excluded_fields_names` are
@@ -18,7 +17,7 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names,
         model._meta.get_field(f).name for f, v in data.items()
         if f not in excluded_fields_names and previous_data.get(f) != v
     ]
-    if check_fake and diff_is_fake(data, previous_data, diff_fields):
+    if diff_is_fake(data, previous_data, diff_fields):
         # Takes into account that in atris < 1.4
         # m2m relation ids were unordered,
         # which often yielded false positives

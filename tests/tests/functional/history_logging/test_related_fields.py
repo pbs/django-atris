@@ -434,3 +434,17 @@ def test_additional_data_from_initialy_changed_instance_copied_to_history_of_man
     )
     expected = {'where_from': 'Space', 'message': 'We come in peace!'}
     assert group_update_with_episode.additional_data == expected
+
+
+@mark.django_db
+def test_reordering_many_to_many_does_not_generate_record(episode):
+    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor3 = Actor.objects.create(name='McKinley Belcher III')
+    episode.cast.add(actor3, actor2)
+    cast_updated = episode.history.first()
+    # re-order m2m
+    cast_updated.data['cast'] = '{}, {}'.format(actor3.id, actor2.id)
+    cast_updated.save()
+    episode.save()
+
+    assert episode.history.count() == 2  # save + 1 update

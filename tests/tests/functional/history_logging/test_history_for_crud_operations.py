@@ -9,6 +9,7 @@ from django.utils.timezone import now
 from pytest import mark
 
 from tests.models import Poll, Choice, Voter
+from tests.tests.functional.history_logging.conftest import history_format_fks
 
 
 str = unicode if six.PY2 else str  # noqa
@@ -73,10 +74,11 @@ def test_updating_related_fields_recorded_for_model(choice, voter):
     assert choice.history.count() == 2
     updated_poll_and_voters = choice.history.first()
     assert updated_poll_and_voters.history_type == '~'
-    assert set(updated_poll_and_voters.history_diff) == set(['poll', 'voters'])
+    assert set(updated_poll_and_voters.history_diff) == {'poll', 'voters'}
     assert updated_poll_and_voters.data['poll'] == str(new_poll.pk)
-    expected_voters = '{}, {}'.format(another_voter.pk, voter.pk)
-    assert updated_poll_and_voters.data['voters'] == expected_voters
+    assert updated_poll_and_voters.data['voters'] == history_format_fks([
+        voter.pk, another_voter.pk
+    ])
 
 
 @mark.django_db

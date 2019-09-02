@@ -5,6 +5,7 @@ from atris.models import HistoryLogging
 from tests.models import (
     Show, Actor, Writer, Link, Voter, Group, Admin, Season, Episode, Episode2
 )
+from tests.tests.functional.history_logging.conftest import history_format_fks
 
 
 @mark.django_db
@@ -57,14 +58,14 @@ def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referen
 @mark.django_db
 def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
     # arrange
-    show_url_3 = Link.objects.create(
-        name='PBS link',
-        url='http://pbs.org/mercy-street',
-        related_object=show
-    )
     show_url_2 = Link.objects.create(
         name='Amazon link',
         url='http://amazon.com/mercy-street',
+        related_object=show
+    )
+    show_url_3 = Link.objects.create(
+        name='PBS link',
+        url='http://pbs.org/mercy-street',
         related_object=show
     )
     # assert
@@ -72,7 +73,8 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
     assert link_update_notif.related_field_history is not None
     assert link_added.history_type == '~'
     assert link_added.history_diff == ['links']
-    expected_links = '{}, {}'.format(show_url_2.pk, show_url_3.pk)
+    expected_links = history_format_fks([
+        show_url_2.pk, show_url_3.pk])
     assert link_added.data['links'] == expected_links
 
 
@@ -115,7 +117,8 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
     cast_updated = episode.history.first()
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
-    assert cast_updated.data['cast'] == '{}, {}'.format(actor3.pk, actor2.pk)
+    assert cast_updated.data['cast'] == history_format_fks([
+        actor3.pk, actor2.pk])
     episode_update_notif, special_added = actor3.history.all()[:2]
     assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
@@ -281,15 +284,17 @@ def test_history_generated_for_object_through_reverse_m2m_relation_with_untracke
     assert voters_cleared.data['voters'] == ''
     assert voter2_removed.history_type == '~'
     assert voter2_removed.history_diff == ['voters']
-    assert voter2_removed.data['voters'] == '{}, {}'.format(voter1.pk,
-                                                            voter3.pk)
+    assert voter2_removed.data['voters'] == history_format_fks([
+        voter1.pk, voter3.pk
+    ])
     assert voter3_added.history_type == '~'
     assert voter3_added.history_diff == ['voters']
-    assert voter3_added.data['voters'] == '{}, {}, {}'.format(
-        voter1.pk, voter2.pk, voter3.pk)
+    assert voter3_added.data['voters'] == history_format_fks([
+        voter1.pk, voter2.pk, voter3.pk])
     assert voters_set.history_type == '~'
     assert voters_set.history_diff == ['voters']
-    assert voters_set.data['voters'] == '{}, {}'.format(voter1.pk, voter2.pk)
+    assert voters_set.data['voters'] == history_format_fks([
+        voter1.pk, voter2.pk])
     assert group_created.history_type == '+'
 
 
@@ -319,15 +324,16 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object():  # n
     assert admins_cleared.data['admins'] == ''
     assert admin2_removed.history_type == '~'
     assert admin2_removed.history_diff == ['admins']
-    assert admin2_removed.data['admins'] == '{}, {}'.format(admin1.pk,
-                                                            admin3.pk)
+    assert admin2_removed.data['admins'] == history_format_fks([
+        admin1.pk, admin3.pk])
     assert admin3_added.history_type == '~'
     assert admin3_added.history_diff == ['admins']
-    assert admin3_added.data['admins'] == '{}, {}, {}'.format(
-        admin1.pk, admin2.pk, admin3.pk)
+    assert admin3_added.data['admins'] == history_format_fks([
+        admin1.pk, admin2.pk, admin3.pk])
     assert admins_set.history_type == '~'
     assert admins_set.history_diff == ['admins']
-    assert admins_set.data['admins'] == '{}, {}'.format(admin1.pk, admin2.pk)
+    assert admins_set.data['admins'] == history_format_fks([
+        admin1.pk, admin2.pk])
     assert group_created.history_type == '+'
 
 
@@ -428,3 +434,17 @@ def test_additional_data_from_initialy_changed_instance_copied_to_history_of_man
     )
     expected = {'where_from': 'Space', 'message': 'We come in peace!'}
     assert group_update_with_episode.additional_data == expected
+
+
+@mark.django_db
+def test_reordering_many_to_many_does_not_generate_record(episode):
+    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor3 = Actor.objects.create(name='McKinley Belcher III')
+    episode.cast.add(actor3, actor2)
+    cast_updated = episode.history.first()
+    # re-order m2m
+    cast_updated.data['cast'] = '{}, {}'.format(actor3.id, actor2.id)
+    cast_updated.save()
+    episode.save()
+
+    assert episode.history.count() == 2  # save + 1 update

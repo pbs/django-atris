@@ -45,3 +45,14 @@ def episode(show, writer):
 @fixture
 def season(show):
     return Season.objects.create(title='1', description='Something', show=show)
+
+
+def history_format_fks(ids):
+    """
+    Sorts a list of ids and converts to the format compatible with
+    atris data
+    :param ids: list of primary keys
+    :return: string of concatenated ids after sort
+    """
+    sorted_ids = sorted([str(u) for u in ids])
+    return ', '.join(sorted_ids)

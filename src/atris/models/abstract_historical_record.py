@@ -157,7 +157,7 @@ class AbstractHistoricalRecord(models.Model):
         ContentType,
         on_delete=models.CASCADE,
     )
-    object_id = models.TextField(db_index=True)
+    object_id = models.TextField()
     content_object = GenericForeignKey(
         'content_type',
         'object_id',
@@ -200,6 +200,7 @@ class AbstractHistoricalRecord(models.Model):
         app_label = 'atris'
         ordering = ['-history_date']
         abstract = True
+        index_together = ['object_id', 'history_date']
 
     @property
     def previos_version(self):

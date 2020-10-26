@@ -12,7 +12,7 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     :param model: - the Django model or an instance of that model.
     """
     if not previous_data:
-        return []
+        return None
     diff_fields = [
         model._meta.get_field(f).name for f, v in data.items()
         if f not in excluded_fields_names and previous_data.get(f) != v

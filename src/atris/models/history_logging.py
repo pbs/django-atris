@@ -413,9 +413,12 @@ class InterestedObjectHistoryGenerator(object):
         self.previous_data = previous_data
 
     def __call__(self):
+        # Make sure the value changed check is made against an empty list in case history_diff is None
+        fields_to_check = self.instance_history.history_diff or []
+
         for field_name in self.interested_fields:
             field_value_changed = (
-                field_name in self.instance_history.history_diff or
+                field_name in fields_to_check or
                 self.instance_history.history_type == HistoricalRecord.DELETE
             )
             get_related_objects = HistoryEnabledRelatedObjectsCollecter(
@@ -424,7 +427,7 @@ class InterestedObjectHistoryGenerator(object):
                 self.previous_data if field_value_changed else None
             )
             interested_objects = get_related_objects()
-            field_changed = field_name in self.instance_history.history_diff
+            field_changed = field_name in fields_to_check
             for interested_object, status in interested_objects.items():
                 # Register any changes to the interested object before the
                 # observed object notification is logged into history.

@@ -15,33 +15,33 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
         return None
     diff_fields = [
         model._meta.get_field(f).name for f, v in data.items()
-        if f not in excluded_fields_names and previous_data.get(f) != v
+        if f not in excluded_fields_names and is_different(
+            old=previous_data.get(f),
+            new=v,
+            field=model._meta.get_field(f),
+        )
     ]
-    if diff_is_fake(data, previous_data, diff_fields):
-        # Takes into account that in atris < 1.4
-        # m2m relation ids were unordered,
-        # which often yielded false positives
-        return []
+
     return diff_fields
 
 
-def diff_is_fake(data, prev_data, diff_fields):
-    """
-    If all the diff_fields have values like '123, 456' vs '456, 123'
-    it means it's a false diff.
-    """
-    for field_name in diff_fields:
-        id_list = re.compile(r'^(\d+,\s)+\d+$')
-        new_list = re.match(id_list, data.get(field_name, '') or '')
-        prev_list = re.match(id_list, prev_data.get(field_name, '') or '')
-        if not new_list or not prev_list:
-            return False
-        else:
-            old_set = set(prev_data[field_name].split(', '))
-            curr_set = set(data[field_name].split(', '))
-            if old_set != curr_set:
-                return False
-    return True
+def is_different(old, new, field):
+    # serializing/deserializing a json object can change key order
+    if field.get_internal_type().strip() == 'JSONField':
+        old = json.loads(old)
+        new = json.loads(new)
+
+    if field.get_internal_type().strip() == 'ArrayField':
+        old = set(old)
+        new = set(new)
+
+    id_list = re.compile(r'^(\d+,\s)+\d+$')
+    new_list = re.match(id_list, new or '')
+    prev_list = re.match(id_list, old or '')
+    if new_list and prev_list:
+        old = set(old.split(', '))
+        new = set(new.split(', '))
+    return old != new
 
 
 def get_instance_field_data(instance):

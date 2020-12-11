@@ -1,4 +1,5 @@
 import re
+import json
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
@@ -65,6 +66,8 @@ def get_instance_field_data(instance):
             data[name] = ', '.join([str(e) for e in ids.order_by('pk')])
         elif field.one_to_one and not field.concrete:
             data[name] = str(value.pk) if value is not None else None
+        elif isinstance(value, dict):
+            data[name] = json.dumps(value) if value is not None else None
         else:
             data[name] = str(value) if value is not None else None
     return data

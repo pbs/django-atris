@@ -33,8 +33,8 @@ def is_different(old, new, field):
         new = json.loads(new)
 
     if field.get_internal_type().strip() == 'ArrayField':
-        old = set(old)
-        new = set(new)
+        old = set(old.split(', '))
+        new = set(new.split(', '))
 
     id_list = re.compile(r'^(\d+,\s)+\d+$')
     new_list = re.match(id_list, new or '')

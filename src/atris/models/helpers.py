@@ -28,18 +28,16 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
 
 def is_different(old, new, field):
     # serializing/deserializing a json object can change key order
-    if field.get_internal_type().strip() == 'JSONField':
-        old = json.loads(old)
-        new = json.loads(new)
-
-    if field.get_internal_type().strip() == 'ArrayField':
-        old = set(old.split(', '))
-        new = set(new.split(', '))
-
     id_list = re.compile(r'^(\d+,\s)+\d+$')
     new_list = re.match(id_list, new or '')
     prev_list = re.match(id_list, old or '')
-    if new_list and prev_list:
+    is_list = new_list and prev_list
+    is_relation_to_many = (field.one_to_many or field.many_to_many) and is_list
+
+    if field.get_internal_type().strip() == 'JSONField':
+        old = json.loads(old)
+        new = json.loads(new)
+    elif field.get_internal_type().strip() == 'ArrayField' or is_relation_to_many:
         old = set(old.split(', '))
         new = set(new.split(', '))
     return old != new

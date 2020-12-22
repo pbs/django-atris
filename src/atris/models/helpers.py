@@ -1,5 +1,6 @@
 import re
 import json
+import ast
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
@@ -34,12 +35,21 @@ def is_different(old, new, field):
     is_list = new_list and prev_list
     is_relation_to_many = (field.one_to_many or field.many_to_many) and is_list
 
+    # django jsonfield allows both python dicts or raw json
     if field.get_internal_type().strip() == 'JSONField':
-        old = json.loads(old)
-        new = json.loads(new)
+        try:
+            # for valid python dict
+            old = ast.literal_eval(old) if old else old
+        except ValueError:
+            # for string of json
+            old = json.loads(old) if old else old
+        try:
+            new = ast.literal_eval(new) if new else new
+        except ValueError:
+            new = json.loads(new) if new else new
     elif field.get_internal_type().strip() == 'ArrayField' or is_relation_to_many:
-        old = set(old.split(', '))
-        new = set(new.split(', '))
+        old = set(old.split(', ')) if old else old
+        new = set(new.split(', ')) if new else new
     return old != new
 
 
@@ -64,8 +74,6 @@ def get_instance_field_data(instance):
             data[name] = ', '.join([str(e) for e in ids.order_by('pk')])
         elif field.one_to_one and not field.concrete:
             data[name] = str(value.pk) if value is not None else None
-        elif isinstance(value, dict):
-            data[name] = json.dumps(value) if value is not None else None
         else:
             data[name] = str(value) if value is not None else None
     return data

@@ -84,8 +84,8 @@ For starters, the fields made available to you when inspecting a history instanc
 * history_user_id = the id of the user that triggered the history instance (taken from middleware)
 * history_type = type of history, +: Create, ~: Update, -:Delete (the method 'get_history_type_display()' gets you the string interpretation)
 * data = JSON field, contains a snapshot (in the form of a dict) of the model instance that the history is being kept of, doesn't contain excluded fields nor additional data fields.
-  All field values are converted to strings. The values of foreign keys are represented by the object ID as a string. The values of ManyoManyFilds are represented by a string
-  containing a comma-sparated list of IDs.
+  All field values are converted to strings. The values of foreign keys are represented by the object ID as a string. The values of ManyToManyFields are represented by a string
+  containing a comma-separated list of IDs.
 
     **New in version 1.1.0: changed key of ForeignKey fields from <FK_FIELD_NAME>_id to <FK_FIELD_NAME>; added entry for many-to-many field**
 * additional_data = JSON field, contains additional data of the model instance in the form of a dict

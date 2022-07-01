@@ -23,7 +23,7 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help='Any historical record older than the number of days '
-                 'specified gets deleted.'
+                 'specified gets deleted.',
         )
         parser.add_argument(
             '--weeks',
@@ -31,7 +31,7 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help='Any historical record older than the number of months '
-                 'specified gets deleted.'
+                 'specified gets deleted.',
         )
         parser.add_argument(
             '--from-archive',
@@ -39,16 +39,18 @@ class Command(BaseCommand):
             default=False,
             action='store_true',
             help='Delete occurs on the "archived historical records" table '
-                 'instead of the default "historical records" table.'
+                 'instead of the default "historical records" table.',
         )
 
     def handle(self, *args, **options):
         days = options.get('days')
         weeks = options.get('weeks')
         if not (days or weeks):
-            self.stderr.write("{msg}\n".format(
-                msg=self.PARAM_ERROR,
-            ))
+            self.stderr.write(
+                "{msg}\n".format(
+                    msg=self.PARAM_ERROR,
+                ),
+            )
             return
 
         model = ArchivedHistoricalRecord if options.get('from_archive') \

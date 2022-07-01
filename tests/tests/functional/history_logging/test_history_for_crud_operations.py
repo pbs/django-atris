@@ -133,10 +133,10 @@ def test_deleting_referenced_tracked_object_tracks_both_delete_operations(
 @mark.django_db
 def test_history_not_generated_if_no_fields_changed(poll):
     # arrange
-    lastest_history = poll.history.first()
+    latest_history = poll.history.first()
     previous_history_count = poll.history.count()
     # act
     poll.save()
     # assert
-    assert poll.history.first() == lastest_history
+    assert poll.history.first() == latest_history
     assert poll.history.count() == previous_history_count

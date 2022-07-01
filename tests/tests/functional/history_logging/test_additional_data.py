@@ -46,7 +46,7 @@ def test_default_additional_data_not_modified_when_changing_it_on_the_instance(
 
 
 @mark.django_db
-def test_additiona_data_without_default_can_be_set_on_the_instance(choice):
+def test_additional_data_without_default_can_be_set_on_the_instance(choice):
     # arrange
     choice.votes = 1
     choice.additional_data['where_from'] = 'System'

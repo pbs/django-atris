@@ -159,7 +159,7 @@ class TestDiffString:
         assert result == 'No prior information available.', failure_message
 
 
-class TestHistoryLoggingOrdering():
+class TestHistoryLoggingOrdering:
 
     def test_global_history_is_ordered_by_history_date(
             self, db, history_setup):

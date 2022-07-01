@@ -60,12 +60,12 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
     # arrange
     show_url_2 = Link.objects.create(
         name='Amazon link',
-        url='http://amazon.com/mercy-street',
+        url='https://amazon.com/mercy-street',
         related_object=show
     )
     show_url_3 = Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street',
+        url='https://pbs.org/mercy-street',
         related_object=show
     )
     # assert
@@ -84,8 +84,8 @@ def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(
     # arrange
     Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street-ep3',
-        related_object=episode
+        url='https://pbs.org/mercy-street-ep3',
+        related_object=episode,
     )
     # assert
     special_history = episode.history.first()
@@ -219,14 +219,12 @@ def test_excluded_many_to_many_field_not_recorded_in_history(episode):
 
 @mark.django_db
 def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregistered_object(  # noqa
-        choice):
+        choice, groups):
     # arrange
     # Voter is not tracked in history but Group is so the group instances
     # should have history.
     voter = Voter.objects.create(choice=choice, name='Joe')
-    group1 = Group.objects.create(name='Group1')
-    group2 = Group.objects.create(name='Group2')
-    group3 = Group.objects.create(name='Group3')
+    group1, group2, group3 = groups
     # act
     voter.groups.set([group1, group2])
     voter.groups.add(group3)
@@ -338,14 +336,13 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object():  # n
 
 
 @mark.django_db
-def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_untracked_object():  # noqa
+def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_untracked_object(  # noqa
+        groups):
     # arrange
     # Adding objects through the reverse many-to-many relation: Voters to a
     # Group. The voters will not have history but the group will.
     admin = Admin.objects.create(name='Joe')
-    group1 = Group.objects.create(name='Group1')
-    group2 = Group.objects.create(name='Group2')
-    group3 = Group.objects.create(name='Group3')
+    group1, group2, group3 = groups
     # act
     admin.groups.set([group1, group2])
     admin.groups.add(group3)

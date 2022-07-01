@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
-import logging
 from datetime import timedelta
+import logging
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -12,11 +10,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models, connection
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.utils import six
 from django.utils.timezone import now
-
-
-str = unicode if six.PY2 else str  # noqa
 
 
 logger = logging.getLogger(__name__)
@@ -44,10 +38,10 @@ class HistoricalRecordQuerySet(QuerySet):
         """
         concrete_model = model_proxy._meta.concrete_model
         by_models = self.filter(
-            Q(content_type__model=model_proxy._meta.model_name) &
-            Q(content_type__app_label=model_proxy._meta.app_label) |
-            Q(content_type__model=concrete_model._meta.model_name) &
-            Q(content_type__app_label=concrete_model._meta.app_label)
+            Q(content_type__model=model_proxy._meta.model_name)
+            & Q(content_type__app_label=model_proxy._meta.app_label)
+            | Q(content_type__model=concrete_model._meta.model_name)
+            & Q(content_type__app_label=concrete_model._meta.app_label)
         )
         return by_models.filter(object_id=id_)
 
@@ -61,7 +55,7 @@ class HistoricalRecordQuerySet(QuerySet):
         """
         return self.filter(
             content_type__model=model._meta.model_name,
-            content_type__app_label=model._meta.app_label
+            content_type__app_label=model._meta.app_label,
         )
 
     def by_app_label_and_model_name(self, app_label, model_name):
@@ -75,7 +69,7 @@ class HistoricalRecordQuerySet(QuerySet):
         """
         return self.filter(
             content_type__model=model_name,
-            content_type__app_label=app_label
+            content_type__app_label=app_label,
         )
 
     def most_recent(self):
@@ -101,8 +95,10 @@ class HistoricalRecordQuerySet(QuerySet):
             logger.error('You must supply either the days or the weeks param')
             return
         elif days and weeks:
-            logger.info('You supplied both days and weeks, weeks param'
-                        ' will be used as the delimiter.')
+            logger.info(
+                'You supplied both days and weeks, '
+                'the weeks param will be used as the delimiter.'
+            )
         td = timedelta(weeks=weeks) if weeks else timedelta(days=days)
         return self.filter(history_date__lte=now() - td)
 
@@ -120,23 +116,27 @@ class HistoricalRecordQuerySet(QuerySet):
             content_type__model=model.model,
             content_type__app_label=model.app_label,
             object_id=object_id,
-            id__lt=history_id
+            id__lt=history_id,
         )
         return main_qs.order_by('-history_date').first()
 
     def approx_count(self):
         """
             Takes a queryset and generates a fast approximate count(*) for it.
-            This is required because postgresql count(*) has to go through all
-            of the entries in the database, making it extremely slow for
+            This is required because postgresql count(*) has to go through
+            all the entries in the database, making it extremely slow for
             large tables.
             :return: int representing approx count(*)
             """
         table_name = self.model._meta.db_table
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT reltuples FROM pg_class WHERE relname='{}';".format(
-                table_name))
+            "SELECT reltuples "
+            "FROM pg_class "
+            "WHERE relname='{}';".format(
+                table_name,
+            ),
+        )
         row = cursor.fetchone()
         return int(row[0])
 
@@ -161,7 +161,7 @@ class AbstractHistoricalRecord(models.Model):
     content_object = GenericForeignKey(
         'content_type',
         'object_id',
-        for_concrete_model=False
+        for_concrete_model=False,
     )
 
     history_date = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -170,10 +170,13 @@ class AbstractHistoricalRecord(models.Model):
     history_type = models.CharField(
         max_length=1,
         choices=HISTORY_TYPES,
-        db_index=True
+        db_index=True,
     )
-    history_diff = ArrayField(models.CharField(max_length=200),
-                              blank=True, null=True)
+    history_diff = ArrayField(
+        models.CharField(max_length=200),
+        blank=True,
+        null=True,
+    )
 
     data = JSONField()
     related_field_history = models.ForeignKey(
@@ -181,7 +184,7 @@ class AbstractHistoricalRecord(models.Model):
         on_delete=models.CASCADE,
         related_name='referenced_objects_history',
         null=True,
-        blank=True
+        blank=True,
     )
     additional_data = JSONField(null=True)
     objects = HistoricalRecordQuerySet.as_manager()
@@ -193,7 +196,7 @@ class AbstractHistoricalRecord(models.Model):
         return '{history_type} {content_type} id={object_id}'.format(
             history_type=self.get_history_type_display(),
             content_type=self.content_type.model,
-            object_id=self.object_id
+            object_id=self.object_id,
         )
 
     class Meta:
@@ -203,11 +206,11 @@ class AbstractHistoricalRecord(models.Model):
         index_together = ['object_id', 'history_date']
 
     @property
-    def previos_version(self):
+    def previous_version(self):
         return self.__class__.objects.previous_version_by_model_and_id(
             model=self.content_type,
             object_id=self.object_id,
-            history_id=self.id
+            history_id=self.id,
         )
 
     def get_diff_to_prev_string(self):
@@ -221,7 +224,7 @@ class AbstractHistoricalRecord(models.Model):
         diff_string = '{}d '.format(self.get_history_type_display())
         if self.history_type == self.UPDATE:
             if not self.history_diff:
-                if not self.previos_version:
+                if not self.previous_version:
                     diff_string = 'No prior information available.'
                 else:
                     diff_string += 'with no change'

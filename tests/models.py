@@ -1,6 +1,7 @@
 import uuid
+
 from django.contrib.contenttypes.fields import (
-    ContentType, GenericRelation, GenericForeignKey
+    ContentType, GenericRelation, GenericForeignKey,
 )
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -18,18 +19,23 @@ class Poll(models.Model):
 
     additional_data = {'where_from': 'Import'}  # default
 
-    ignore_history_for_users = {'user_ids': [1010101],
-                                'user_names': ['ignore_user']}
+    ignore_history_for_users = {
+        'user_ids': [1010101],
+        'user_names': ['ignore_user'],
+    }
 
-    history = HistoryLogging('additional_data', 'excluded_fields',
-                             'ignore_history_for_users')
+    history = HistoryLogging(
+        'additional_data',
+        'excluded_fields',
+        'ignore_history_for_users',
+    )
 
 
 class Choice(models.Model):
     poll = models.ForeignKey(
         Poll,
         on_delete=models.CASCADE,
-        related_name='choices'
+        related_name='choices',
     )
     choice = models.CharField(max_length=200)
     votes = models.IntegerField()
@@ -39,13 +45,16 @@ class Choice(models.Model):
 
     history = HistoryLogging(
         additional_data_param_name='additional_data',
-        ignore_history_for_users='ignore_history_for_users'
+        ignore_history_for_users='ignore_history_for_users',
     )
 
 
 class Admin(models.Model):
-    uuid = models.UUIDField(verbose_name='ID', primary_key=True,
-                            default=uuid.uuid4)
+    uuid = models.UUIDField(
+        verbose_name='ID',
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     name = models.CharField(max_length=200)
 
 
@@ -57,8 +66,11 @@ class Group(models.Model):
 
 
 class Voter(models.Model):
-    id = models.UUIDField(verbose_name='ID', primary_key=True,
-                          default=uuid.uuid4)
+    id = models.UUIDField(
+        verbose_name='ID',
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     choice = models.ForeignKey(
         Choice,
         on_delete=models.CASCADE,
@@ -75,7 +87,8 @@ class Show(models.Model):
 
     history_additional_data = {'where_from': 'System'}
     history = HistoryLogging(
-        additional_data_param_name='history_additional_data')
+        additional_data_param_name='history_additional_data',
+    )
 
 
 class Season(models.Model):
@@ -93,8 +106,11 @@ class Actor(models.Model):
 
 
 class Writer(models.Model):
-    cid = models.UUIDField(verbose_name='ID', primary_key=True,
-                           default=uuid.uuid4)
+    cid = models.UUIDField(
+        verbose_name='ID',
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     name = models.CharField(max_length=100)
 
     excluded_fields = ['contributions']
@@ -129,7 +145,7 @@ class Episode(models.Model):
     history = HistoryLogging(
         excluded_fields_param_name='excluded_fields',
         additional_data_param_name='additional_data',
-        interested_related_fields='interested_related_fields'
+        interested_related_fields='interested_related_fields',
     )
 
 
@@ -141,7 +157,7 @@ class Episode2(Episode):
     interested_related_fields = ['show', 'cast', 'author']
     history = HistoryLogging(
         additional_data_param_name='additional_data',
-        interested_related_fields='interested_related_fields'
+        interested_related_fields='interested_related_fields',
     )
 
 
@@ -160,5 +176,5 @@ class Link(models.Model):
 
     interested_related_fields = ['related_object']
     history = HistoryLogging(
-        interested_related_fields='interested_related_fields'
+        interested_related_fields='interested_related_fields',
     )

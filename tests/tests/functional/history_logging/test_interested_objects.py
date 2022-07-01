@@ -220,7 +220,7 @@ def test_related_history_for_interested_generic_foreign_key_with_generic_relatio
     # act
     show_url = Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street',
+        url='https://pbs.org/mercy-street',
         related_object=show
     )
     show_url.name = 'PBS'
@@ -246,10 +246,10 @@ def test_related_history_for_interested_generic_foreign_key_without_generic_rela
     # act
     episode_url = Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street-ep1',
+        url='https://pbs.org/mercy-street-ep1',
         related_object=episode
     )
-    episode_url.url = 'http://pbs.org/mercy-street-unknown-soldier'
+    episode_url.url = 'https://pbs.org/mercy-street-unknown-soldier'
     episode_url.save()
     episode_url_id = episode_url.pk
     episode_url.delete()
@@ -404,7 +404,7 @@ def test_history_generated_for_interested_object_referenced_by_generic_field(
     # act
     show_url = Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street',
+        url='https://pbs.org/mercy-street',
         related_object=show
     )
     next_show = Show.objects.create(title='Another', description='Another')
@@ -488,15 +488,15 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                       'co_authors': ''}
             return result
 
-    url = Link.objects.create(
+    link = Link.objects.create(
         name='PBS link',
-        url='http://pbs.org/mercy-street',
+        url='https://pbs.org/mercy-street',
         related_object=obj
     )
     # act
     obj.title = 'Another title'
-    url.url = 'http://pbs.org/another-title'
-    url.save()
+    link.url = 'https://pbs.org/another-title'
+    link.save()
     obj.save()
     # assert
     assert obj.history.count() == obj_history_count
@@ -504,8 +504,8 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
     assert title_updated.additional_data == {'where_from': 'System'}
-    assert title_updated.data == expected_data(url)
+    assert title_updated.data == expected_data(link)
     assert link_updated.history_type == '~'
     assert link_updated.history_diff == ['link']
     assert link_updated.additional_data['link'] == 'Updated Link'
-    assert link_updated.data == expected_data(url)
+    assert link_updated.data == expected_data(link)

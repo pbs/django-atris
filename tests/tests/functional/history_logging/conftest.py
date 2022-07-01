@@ -5,7 +5,9 @@ from django.utils.timezone import now
 
 from pytest import fixture
 
-from tests.models import Poll, Choice, Voter, Show, Writer, Episode, Season
+from tests.models import (
+    Choice, Episode, Group, Poll, Season, Show, Voter, Writer,
+)
 
 
 @fixture
@@ -45,6 +47,15 @@ def episode(show, writer):
 @fixture
 def season(show):
     return Season.objects.create(title='1', description='Something', show=show)
+
+
+@fixture
+def groups():
+    return (
+        Group.objects.create(name='Group1'),
+        Group.objects.create(name='Group2'),
+        Group.objects.create(name='Group3'),
+    )
 
 
 def history_format_fks(ids):

@@ -30,7 +30,7 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help='Any historical record older than the number of days '
-                 'specified gets archived.'
+                 'specified gets archived.',
         )
         parser.add_argument(
             '--weeks',
@@ -38,16 +38,18 @@ class Command(BaseCommand):
             type=int,
             default=None,
             help='Any historical record older than the number of '
-                 'months specified gets archived.'
+                 'months specified gets archived.',
         )
 
     def handle(self, *args, **options):
         days = options.get('days')
         weeks = options.get('weeks')
         if not (days or weeks):
-            self.stderr.write("{msg}\n".format(
-                msg=self.PARAM_ERROR,
-            ))
+            self.stderr.write(
+                "{msg}\n".format(
+                    msg=self.PARAM_ERROR,
+                ),
+            )
             return
         old_history_entries = HistoricalRecord.objects.older_than(days, weeks)
         handled_entries_nr = old_history_entries.count()
@@ -57,19 +59,31 @@ class Command(BaseCommand):
     @transaction.atomic
     def migrate_data(self, days=None, weeks=None):
         if days and weeks:
-            logger.info('You supplied both days and weeks, weeks param'
-                        ' will be used as the delimiter.')
+            logger.info(
+                "Both days and weeks parameters were supplied for migrating"
+                "history records! The weeks parameter will be used as the"
+                "delimiter!"
+            )
         td = timedelta(weeks=weeks) if weeks else timedelta(days=days)
         older_than_date = now() - td
         cursor = connection.cursor()
         fields_str = ','.join(
             [field.attname for field in HistoricalRecord._meta.fields]
         )
-        query = ("INSERT INTO atris_archivedhistoricalrecord ({}) "
-                 "SELECT {} FROM atris_historicalrecord "
-                 "WHERE history_date < '{}';".format(fields_str, fields_str,
-                                                     older_than_date.date()))
+        query = (
+            "INSERT INTO atris_archivedhistoricalrecord ({}) "
+            "SELECT {} FROM atris_historicalrecord "
+            "WHERE history_date < '{}';".format(
+                fields_str,
+                fields_str,
+                older_than_date.date(),
+            )
+        )
         cursor.execute(query)
-        query = ("DELETE FROM atris_historicalrecord "
-                 "WHERE history_date < '{}';".format(older_than_date.date()))
+        query = (
+            "DELETE FROM atris_historicalrecord "
+            "WHERE history_date < '{}';".format(
+                older_than_date.date(),
+            )
+        )
         cursor.execute(query)

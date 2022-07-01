@@ -1,30 +1,49 @@
 import ast
 import json
 import re
+from typing import Dict, List
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
+from django.db.models import Model
 
 
-def get_diff_fields(model, data, previous_data, excluded_fields_names):
+def get_diff_fields(
+        model: Model,
+        data: Dict,
+        previous_data: Dict,
+        excluded_fields_names: List[str],
+):
     """
-    Returns the fields of `data` for which the values differ in
-    `previous_data`. The fields that are given in `excluded_fields_names` are
-    not registered as having changed.
-    :param model: - the Django model or an instance of that model.
+
+    Args:
+        model: the Django model or an instance of that model
+        data: current instance data as dictionary
+        previous_data: previous instance data as dictionary
+        excluded_fields_names: excluded fields names of the specified model
+
+    Returns: the fields of `data` for which the values differ in
+
     """
     if not previous_data:
         return None
-    diff_fields = [
-        model._meta.get_field(f).name for f, v in data.items()
-        if f not in excluded_fields_names and is_different(
-            old=previous_data.get(f),
+    diff_fields = []
+    for f, v in data.items():
+        if f in excluded_fields_names:
+            continue
+        try:
+            previous_value = previous_data[f]
+        except KeyError:
+            continue
+        model_field = model._meta.get_field(f)
+        is_field_different = is_different(
+            old=previous_value,
             new=v,
-            field=model._meta.get_field(f),
+            field=model_field,
         )
-    ]
-
+        if is_field_different:
+            diff_fields.append(model_field.name)
     return diff_fields
 
 

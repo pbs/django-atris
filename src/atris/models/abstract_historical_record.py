@@ -157,7 +157,11 @@ class AbstractHistoricalRecord(models.Model):
         ContentType,
         on_delete=models.CASCADE,
     )
+
+    # TODO: the object_id field should be an integer in order to
+    #  speed up queries that filter rows based on its value
     object_id = models.TextField()
+
     content_object = GenericForeignKey(
         'content_type',
         'object_id',

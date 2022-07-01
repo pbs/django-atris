@@ -83,6 +83,9 @@ class Voter(models.Model):
 class Show(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
+    # TODO: adding a related_query_name parameter to a
+    #  generic relation will cause history generation to fail
+    #  links = GenericRelation('Link', related_query_name='show')
     links = GenericRelation('Link')
 
     history_additional_data = {'where_from': 'System'}

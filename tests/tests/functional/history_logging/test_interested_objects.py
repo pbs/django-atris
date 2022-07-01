@@ -481,6 +481,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
             result = {'id': str(obj.pk),
                       'title': 'Another title',
                       'description': '',
+                      # TODO: use url.show.pk
+                      #  after fixing the related_query_name issue
+                      #  (see tests/models.py)
                       'show': str(show.pk),
                       'season': None,
                       'cast': '',

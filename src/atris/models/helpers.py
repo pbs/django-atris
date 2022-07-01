@@ -1,7 +1,8 @@
-import re
-import json
 import ast
+import json
+import re
 
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
 
@@ -27,6 +28,16 @@ def get_diff_fields(model, data, previous_data, excluded_fields_names):
     return diff_fields
 
 
+def get_field_internal_type(field):
+    try:
+        return field.get_internal_type().strip()
+    except AttributeError as e:
+        if type(field) == GenericForeignKey:
+            return 'GenericForeignKey'
+        else:
+            raise e
+
+
 def is_different(old, new, field):
     # serializing/deserializing a json object can change key order
     id_list = re.compile(r'^(\d+,\s)+\d+$')
@@ -35,8 +46,9 @@ def is_different(old, new, field):
     is_list = new_list and prev_list
     is_relation_to_many = (field.one_to_many or field.many_to_many) and is_list
 
+    field_internal_type = get_field_internal_type(field=field)
     # django jsonfield allows both python dicts or raw json
-    if field.get_internal_type().strip() == 'JSONField':
+    if field_internal_type == 'JSONField':
         try:
             # for valid python dict
             old = ast.literal_eval(old) if old else old
@@ -47,7 +59,7 @@ def is_different(old, new, field):
             new = ast.literal_eval(new) if new else new
         except ValueError:
             new = json.loads(new) if new else new
-    elif field.get_internal_type().strip() == 'ArrayField' or is_relation_to_many:
+    elif is_relation_to_many or field_internal_type == 'ArrayField':
         old = set(old.split(', ')) if old else old
         new = set(new.split(', ')) if new else new
     return old != new

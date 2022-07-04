@@ -1,7 +1,7 @@
 import ast
 import json
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional, Type, Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ObjectDoesNotExist
@@ -10,11 +10,11 @@ from django.db.models import Model
 
 
 def get_diff_fields(
-        model: Model,
+        model: Union[Model, Type[Model]],
         data: Dict,
         previous_data: Dict,
         excluded_fields_names: List[str],
-):
+) -> Optional[List[str]]:
     """
 
     Args:

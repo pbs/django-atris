@@ -36,9 +36,9 @@ DEFAULT_SETTINGS = dict(
             'PASSWORD': 'pass',
             'HOST': 'localhost',
             'TEST': {
-                'NAME': 'test_history_db'
-            }
-        }
+                'NAME': 'test_history_db',
+            },
+        },
     },
     MIDDLEWARE_CLASSES=[
         'django.contrib.sessions.middleware.SessionMiddleware',

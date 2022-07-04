@@ -453,12 +453,10 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
 @mark.django_db
 @mark.parametrize('entity', ['show', 'episode'])
 def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
-        entity):
-    # arrange
+        entity, show, episode, writer):
     if entity == 'show':
-        from tests.tests.functional.history_logging.conftest import show
-        obj = show()
-        obj_history_count = 5
+        obj = show
+        obj_history_count = 7
 
         def expected_data(url):
             result = {'id': str(obj.pk),
@@ -466,15 +464,11 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                       'description': '',
                       'links': str(url.pk),
                       'season': '',
-                      'specials': ''}
+                      'specials': '20'}
             return result
 
     else:
-        from tests.tests.functional.history_logging.conftest import (
-            show, writer, episode)
-        show = show()
-        writer = writer()
-        obj = episode(show, writer)
+        obj = episode
         obj_history_count = 4
 
         def expected_data(url):
@@ -496,12 +490,12 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
         url='https://pbs.org/mercy-street',
         related_object=obj
     )
-    # act
+
     obj.title = 'Another title'
     link.url = 'https://pbs.org/another-title'
     link.save()
     obj.save()
-    # assert
+
     assert obj.history.count() == obj_history_count
     link_updated, title_updated = obj.history.all()[:2]
     assert title_updated.history_type == '~'

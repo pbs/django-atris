@@ -32,19 +32,33 @@ def get_diff_fields(
     for f, v in data.items():
         if f in excluded_fields_names:
             continue
+        model_field = model._meta.get_field(f)
         try:
             previous_value = previous_data[f]
         except KeyError:
-            continue
-        model_field = model._meta.get_field(f)
-        is_field_different = is_different(
-            old=previous_value,
-            new=v,
-            field=model_field,
-        )
-        if is_field_different:
-            diff_fields.append(model_field.name)
+            if v != get_default_value(model_field):
+                diff_fields.append(model_field.name)
+        else:
+            is_field_different = is_different(
+                old=previous_value,
+                new=v,
+                field=model_field,
+            )
+            if is_field_different:
+                diff_fields.append(model_field.name)
     return diff_fields
+
+
+def get_default_value(field):
+    try:
+        default_value = field.get_default()
+        return str(default_value) if default_value is not None else None
+    except AttributeError as e:
+        error_message = str(e)
+        if 'ManyTo' in error_message:
+            # ManyToManyRel or ManyToOneRel
+            return ''
+        return None
 
 
 def get_field_internal_type(field):

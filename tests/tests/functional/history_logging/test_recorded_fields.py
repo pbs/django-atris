@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.fields import (
     GenericRelation, GenericForeignKey
 )
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 
 from pytest import mark
@@ -76,6 +77,9 @@ def test_history_not_generated_after_adding_new_model_field_without_changing_its
         (Writer, 'work', models.OneToOneRel, None),
         (Link, 'object_id', models.PositiveIntegerField, None),
         (Link, 'related_object', GenericForeignKey, None),
+        (Episode, 'is_published', models.BooleanField, 'True'),
+        (Episode, 'keywords', ArrayField, '[]'),
+        (Episode, 'episode_metadata', JSONField, '{}'),
     ],
 )
 def test_get_default_value_helper(model, field_name, field_type, expected):

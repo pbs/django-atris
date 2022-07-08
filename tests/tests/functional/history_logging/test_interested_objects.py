@@ -453,6 +453,9 @@ def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_s
                 'cast': '',
                 'author': str(writer.pk),
                 'co_authors': '',
+                'is_published': str(obj.is_published),
+                'keywords': '[]',
+                'episode_metadata': '{}',
             }
             return result
 

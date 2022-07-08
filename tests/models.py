@@ -3,6 +3,7 @@ import uuid
 from django.contrib.contenttypes.fields import (
     ContentType, GenericRelation, GenericForeignKey,
 )
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -141,6 +142,13 @@ class Episode(models.Model):
         related_name='work',
     )
     co_authors = models.ManyToManyField(Writer, related_name='contributions')
+    is_published = models.BooleanField(default=True, null=False)
+    keywords = ArrayField(
+        base_field=models.CharField(max_length=20, blank=True),
+        null=False,
+        default=lambda: [],
+    )
+    episode_metadata = JSONField(null=False, default=lambda: {})
 
     additional_data = {'where_from': 'System'}
     interested_related_fields = ['show', 'cast', 'author']

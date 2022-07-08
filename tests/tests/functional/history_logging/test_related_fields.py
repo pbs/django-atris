@@ -81,7 +81,7 @@ def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(
     special_history = episode.history.first()
     expected_keys = {
         'id', 'title', 'description', 'show', 'season', 'cast',
-        'author', 'co_authors'
+        'author', 'co_authors', 'is_published', 'keywords', 'episode_metadata',
     }  # no relation to Link
     assert set(special_history.data.keys()) == expected_keys
 

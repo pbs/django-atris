@@ -41,6 +41,7 @@ class AbstractFactory:
         'PositiveIntegerField': lambda: random_integer(),
         'ArrayField': lambda: [],
         'JSONField': lambda: {},
+        'BooleanField': lambda: random.choice([True, False]),
     }
 
     # Overrides default value for the field type

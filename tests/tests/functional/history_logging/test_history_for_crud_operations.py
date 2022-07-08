@@ -1,18 +1,10 @@
-from __future__ import unicode_literals
-from __future__ import print_function
+from pytest import mark
 
 from atris.models import HistoricalRecord, fake_save
 
-from django.utils import six
-from django.utils.timezone import now
-
-from pytest import mark
-
-from tests.models import Poll, Choice, Voter
-from tests.tests.functional.history_logging.conftest import history_format_fks
-
-
-str = unicode if six.PY2 else str  # noqa
+from tests.conftest import history_format_fks
+from tests.factories import PollFactory, VoterFactory
+from tests.models import Choice, Poll, Voter
 
 
 @mark.django_db
@@ -65,9 +57,9 @@ def test_updating_simple_fields_recorded_for_model(poll):
 @mark.django_db
 def test_updating_related_fields_recorded_for_model(choice, voter):
     # arrange
-    new_poll = Poll.objects.create(question='question', pub_date=now())
+    new_poll = PollFactory.create()
     choice.poll = new_poll
-    another_voter = Voter.objects.create(choice=choice, name='voter_2')
+    another_voter = VoterFactory.create(choice=choice)
     # act
     choice.save()
     # assert
@@ -88,8 +80,10 @@ def test_history_delete_for_tracked_models(poll):
     # act
     poll.delete()
     # assert
-    poll_history = HistoricalRecord.objects.by_model_and_model_id(Poll,
-                                                                  poll_id)
+    poll_history = HistoricalRecord.objects.by_model_and_model_id(
+        Poll,
+        poll_id,
+    )
     assert poll_history.count()
     poll_deleted = poll_history.first()
     assert poll_deleted.history_type == '-'
@@ -120,12 +114,16 @@ def test_deleting_referenced_tracked_object_tracks_both_delete_operations(
     # act
     poll.delete()
     # assert
-    poll_history = HistoricalRecord.objects.by_model_and_model_id(Poll,
-                                                                  poll_id)
+    poll_history = HistoricalRecord.objects.by_model_and_model_id(
+        Poll,
+        poll_id,
+    )
     assert poll_history.count() == 2
     assert poll_history.first().history_type == '-'
-    choice_history = HistoricalRecord.objects.by_model_and_model_id(Choice,
-                                                                    choice_id)
+    choice_history = HistoricalRecord.objects.by_model_and_model_id(
+        Choice,
+        choice_id,
+    )
     assert choice_history.count() == 2
     assert choice_history.first().history_type == '-'
 
@@ -133,7 +131,7 @@ def test_deleting_referenced_tracked_object_tracks_both_delete_operations(
 @mark.django_db
 def test_history_not_generated_if_no_fields_changed(poll):
     # arrange
-    latest_history = poll.history.first()
+    latest_history = poll.history.most_recent()
     previous_history_count = poll.history.count()
     # act
     poll.save()

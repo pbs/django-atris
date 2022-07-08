@@ -1,6 +1,3 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-
 from django.contrib.auth.models import User
 
 from pytest import mark
@@ -45,8 +42,12 @@ def test_history_user_id_not_set_when_user_has_no_id(poll):
 def test_user_full_name_take_precedence_over_username_and_email(poll):
     # arrange
     poll.question = 'A new question'
-    poll.history_user = User(username='test_user', first_name='John',
-                             last_name='Doe', email='john.doe@mail.com')
+    poll.history_user = User(
+        username='test_user',
+        first_name='John',
+        last_name='Doe',
+        email='john.doe@mail.com',
+    )
     # act
     poll.save()
     # assert

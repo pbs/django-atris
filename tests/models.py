@@ -4,7 +4,7 @@ from django.contrib.contenttypes.fields import (
     ContentType, GenericRelation, GenericForeignKey,
 )
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from atris.models import HistoryLogging
 
@@ -83,9 +83,9 @@ class Voter(models.Model):
 class Show(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=1000)
-    # TODO: adding a related_query_name parameter to a
-    #  generic relation will cause history generation to fail
-    #  links = GenericRelation('Link', related_query_name='show')
+
+    # Adding a related_query_name parameter to a GenericRelation will cause
+    # history generation to fail
     links = GenericRelation('Link')
 
     history_additional_data = {'where_from': 'System'}

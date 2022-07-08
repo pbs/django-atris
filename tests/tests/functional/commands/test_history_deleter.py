@@ -1,89 +1,105 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-
 from datetime import timedelta
+from io import StringIO
+import logging
 
 from django.core import management
-from django.utils.six import StringIO
 from django.utils.timezone import now
-from django.contrib.contenttypes.models import ContentType
 
 from pytest import mark
 
-from atris.models import ArchivedHistoricalRecord
+from tests.factories import ArchivedHistoricalRecordFactory, PollFactory
 from tests.models import Poll
 
 
 @mark.django_db
-def test_delete_older_than_days():
-    # arrange
-    out = StringIO()
-    poll = Poll.objects.create(question="test", pub_date=now())
-    created_history = poll.history.last()
-    created_history.history_date = now() - timedelta(days=30)
-    created_history.save()
-    Poll.objects.create(question="test", pub_date=now())
-    # act
-    management.call_command('delete_old_historical_records',
-                            days=20, stdout=out)
-    # assert
-    assert Poll.history.count() == 1
-    assert '1 HistoricalRecord deleted.\n' in out.getvalue()
+class TestDeleteCommand:
 
-
-@mark.django_db
-def test_delete_older_than_weeks():
-    # arrange
-    out = StringIO()
-    poll = Poll.objects.create(question="test", pub_date=now())
-    created_history = poll.history.last()
-    created_history.history_date = now() - timedelta(days=8)
-    created_history.save()
-    Poll.objects.create(question="test", pub_date=now())
-    # act
-    management.call_command('delete_old_historical_records',
-                            weeks=1, stdout=out)
-    # assert
-    assert Poll.history.count() == 1
-    assert '1 HistoricalRecord deleted.\n' in out.getvalue()
-
-
-@mark.django_db
-def test_no_params_passed_signals_error():
-    # arrange
-    out = StringIO()
-    # act
-    management.call_command('delete_old_historical_records', stderr=out)
-    # assert
-    expected_message = 'You must supply either the days or the weeks param'
-    assert expected_message in out.getvalue()
-
-
-@mark.django_db
-def test_delete_archived_older_than_days():
-    # arrange
-    out = StringIO()
-    obj = ArchivedHistoricalRecord.objects.create(
-        content_type=ContentType.objects.get_for_model(Poll),
-        object_id=13, data={}
+    @mark.parametrize(
+        'days, delete_command_kwargs', [
+            (30, {'days': 20}),
+            (8, {'weeks': 1}),
+        ],
     )
-    obj.save()  # save with now() history_date since auto_now_add=True
-    obj.history_date = now() - timedelta(days=10)
-    obj.save()
-    # act
-    management.call_command('delete_old_historical_records',
-                            '--from-archive', days=1, stdout=out)
-    # assert
-    assert '1 ArchivedHistoricalRecord deleted.\n' in out.getvalue()
+    def test_delete_historical_record(self, days, delete_command_kwargs):
+        # arrange
+        out = StringIO()
+        poll = PollFactory.create()
 
+        created_history = poll.history.last()
+        created_history.history_date = now() - timedelta(days=days)
+        created_history.save()
 
-@mark.django_db
-def test_delete_archived_no_date_error():
-    # arrange
-    out = StringIO()
-    # act
-    management.call_command('delete_old_historical_records',
-                            '--from-archive', stderr=out)
-    # assert
-    expected_message = 'You must supply either the days or the weeks param'
-    assert expected_message in out.getvalue()
+        PollFactory.create()
+        # act
+        management.call_command(
+            'delete_old_historical_records',
+            stdout=out,
+            **delete_command_kwargs,
+        )
+        # assert
+        assert Poll.history.count() == 1
+        assert '1 HistoricalRecord deleted.' in out.getvalue()
+
+    @mark.parametrize(
+        'days, delete_command_kwargs', [
+            (10, {'days': 3}),
+            (15, {'weeks': 2}),
+        ],
+    )
+    def test_delete_archived_historical_record(
+            self, days, delete_command_kwargs):
+        # arrange
+        out = StringIO()
+        event = ArchivedHistoricalRecordFactory.create()
+        event.save()  # save with now() history_date since auto_now_add=True
+        event.history_date = now() - timedelta(days=days)
+        event.save()
+        # act
+        management.call_command(
+            'delete_old_historical_records',
+            '--from-archive',
+            stdout=out,
+            **delete_command_kwargs,
+        )
+        # assert
+        assert '1 ArchivedHistoricalRecord deleted.' in out.getvalue()
+
+    def test_call_delete_with_both_days_and_weeks(self, caplog):
+        # arrange
+        out = StringIO()
+        event = ArchivedHistoricalRecordFactory.create()
+        event.save()  # save with now() history_date since auto_now_add=True
+        event.history_date = now() - timedelta(days=15)
+        event.save()
+        # act
+        with caplog.at_level(logging.INFO):
+            management.call_command(
+                'delete_old_historical_records',
+                '--from-archive',
+                stdout=out,
+                days=7,
+                weeks=3,
+            )
+        # assert
+        assert '0 ArchivedHistoricalRecord deleted.' in out.getvalue()
+        assert 'You supplied both days and weeks, the weeks param ' \
+               'will be used as the delimiter.' in caplog.text
+
+    @mark.parametrize(
+        'delete_command_args', [
+            [],  # deletes HistoricalRecords
+            ['--from-archive'],  # deletes ArchivedHistoricalRecords
+        ],
+    )
+    def test_delete_no_params_passed_signals_error(self, delete_command_args):
+        # arrange
+        out = StringIO()
+        # act
+        management.call_command(
+            'delete_old_historical_records',
+            *delete_command_args,
+            stderr=out,
+        )
+        # assert
+        expected_message = 'You must supply either the days or the weeks param'
+        assert expected_message in out.getvalue()

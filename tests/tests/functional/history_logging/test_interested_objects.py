@@ -1,27 +1,20 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-
 from pytest import mark
 
-from tests.models import Actor, Episode, Link, Show
+from tests.factories import EpisodeFactory, LinkFactory, ShowFactory
+from tests.models import Episode, Link
 
 
 @mark.django_db
 def test_related_history_created_for_interested_objects_when_observed_object_added(  # noqa
-        show, writer):
-    # act
-    episode = Episode.objects.create(title='Unknown Soldier',
-                                     description='',
-                                     show=show,
-                                     author=writer)
+        episode):
     # assert
     episode_created = episode.history.get(history_type='+')
-    show_episode_created = show.history.first()
+    show_episode_created = episode.show.history.first()
     expected = 'Created Episode'
     assert show_episode_created.related_field_history == episode_created
     assert show_episode_created.history_diff == ['episode']
     assert show_episode_created.additional_data['episode'] == expected
-    episode_writer_history = writer.history.first()
+    episode_writer_history = episode.author.history.first()
     assert episode_writer_history.related_field_history == episode_created
     assert episode_writer_history.history_diff == ['episode']
     assert episode_writer_history.additional_data['episode'] == expected
@@ -29,10 +22,9 @@ def test_related_history_created_for_interested_objects_when_observed_object_add
 
 @mark.django_db
 def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for_all_its_items(  # noqa
-        episode):
+        episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     # act
     episode.cast.add(actor1)
     episode.cast.add(actor2)
@@ -52,7 +44,7 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
     assert actor1_additional_data['episode'] == 'Added Episode'
     actor2_episode_updated = actor2.history.filter(
         history_diff__contains=['episode'],
-        related_field_history=actor2_added
+        related_field_history=actor2_added,
     )
     assert actor2_episode_updated.count() == 1
     actor2_additional_data = actor2_episode_updated.first().additional_data
@@ -61,10 +53,9 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
 
 @mark.django_db
 def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_items(  # noqa
-        episode):
+        episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     # act
     episode.cast.set([actor1, actor2])
     # assert
@@ -81,10 +72,9 @@ def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_
 
 @mark.django_db
 def test_setting_values_for_an_m2m_field_triggers_related_history_for_previous_items(  # noqa
-        episode):
+        episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1, actor2)
     # act
     episode.cast.set([])
@@ -102,10 +92,9 @@ def test_setting_values_for_an_m2m_field_triggers_related_history_for_previous_i
 
 @mark.django_db
 def test_related_history_created_for_interested_objects_when_m2m_field_updated(
-        show, writer, episode):
+        show, writer, episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     # act
     episode.cast.add(actor1, actor2)
     # assert
@@ -122,10 +111,9 @@ def test_related_history_created_for_interested_objects_when_m2m_field_updated(
 
 @mark.django_db
 def test_removing_values_from_an_m2m_field_triggers_related_history_for_all_items(  # noqa
-        episode):
+        episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1, actor2)
     # act
     episode.cast.remove(actor1)
@@ -143,10 +131,9 @@ def test_removing_values_from_an_m2m_field_triggers_related_history_for_all_item
 
 @mark.django_db
 def test_clearing_items_from_m2m_field_triggers_related_history_for_all_items(
-        episode):
+        episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1, actor2)
     # act
     episode.cast.clear()
@@ -165,10 +152,9 @@ def test_clearing_items_from_m2m_field_triggers_related_history_for_all_items(
 
 @mark.django_db
 def test_updating_attributes_for_observed_object_triggers_related_history_for_all_interested_objects(  # noqa
-        show, writer, episode):
+        show, writer, episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1, actor2)
     # act
     episode.description = 'Lisette draws the face of a soldier...'
@@ -191,9 +177,8 @@ def test_updating_attributes_for_observed_object_triggers_related_history_for_al
 
 @mark.django_db
 def test_deleting_observed_object_triggers_related_history_for_all_interested_objects(  # noqa
-        show, writer, episode):
+        show, writer, episode, actor):
     # arrange
-    actor = Actor.objects.create(name='McKinley Belcher III')
     episode.cast.add(actor)
     episode_id = episode.pk
     # act
@@ -218,11 +203,7 @@ def test_deleting_observed_object_triggers_related_history_for_all_interested_ob
 def test_related_history_for_interested_generic_foreign_key_with_generic_relation(  # noqa
         show):
     # act
-    show_url = Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street',
-        related_object=show
-    )
+    show_url = LinkFactory.create(related_object=show)
     show_url.name = 'PBS'
     show_url.save()
     show_url_id = show_url.pk
@@ -231,7 +212,8 @@ def test_related_history_for_interested_generic_foreign_key_with_generic_relatio
     show_updates = show.history.filter(history_diff__contains=['link'])
     assert show_updates.count() == 3
     url_deleted, url_updated, url_created = Link.history.filter(
-        object_id=show_url_id)
+        object_id=show_url_id,
+    )
     assert show_updates[0].related_field_history == url_deleted
     assert show_updates[0].additional_data['link'] == 'Deleted Link'
     assert show_updates[1].related_field_history == url_updated
@@ -244,11 +226,7 @@ def test_related_history_for_interested_generic_foreign_key_with_generic_relatio
 def test_related_history_for_interested_generic_foreign_key_without_generic_relation(  # noqa
         episode):
     # act
-    episode_url = Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street-ep1',
-        related_object=episode
-    )
+    episode_url = LinkFactory.create(related_object=episode)
     episode_url.url = 'https://pbs.org/mercy-street-unknown-soldier'
     episode_url.save()
     episode_url_id = episode_url.pk
@@ -270,12 +248,7 @@ def test_related_history_for_interested_generic_foreign_key_without_generic_rela
 def test_related_history_not_created_for_objects_not_added_in_interested_fields(  # noqa
         show, writer, season):
     # act
-    episode = Episode.objects.create(
-        title='Unknown Soldier',
-        description='',
-        season=season,
-        author=writer
-    )
+    episode = EpisodeFactory.create(season=season, author=writer)
     episode_id = episode.pk
     episode.title = 'Another title'
     episode.save()
@@ -292,7 +265,7 @@ def test_related_history_not_created_for_objects_not_added_in_interested_fields(
 def test_history_generated_for_previous_interested_object_when_removed_from_observed_object(  # noqa
         show, episode):
     # arrange
-    next_show = Show.objects.create(title='Another', description='Another')
+    next_show = ShowFactory.create()
     # act
     episode.show = next_show
     episode.save()
@@ -308,7 +281,7 @@ def test_history_generated_for_previous_interested_object_when_removed_from_obse
 def test_observed_object_removal_will_override_regular_update_message(
         show, episode):
     # arrange
-    next_show = Show.objects.create(title='Another', description='Another')
+    next_show = ShowFactory.create()
     # act
     episode.show = next_show
     episode.title = 'Another title'
@@ -325,7 +298,7 @@ def test_observed_object_removal_will_override_regular_update_message(
 def test_history_generated_for_new_interested_object_when_set_on_existing_episode(  # noqa
         show, episode):
     # arrange
-    next_show = Show.objects.create(title='Another', description='Another')
+    next_show = ShowFactory.create()
     # act
     episode.show = next_show
     episode.save()
@@ -341,7 +314,7 @@ def test_history_generated_for_new_interested_object_when_set_on_existing_episod
 def test_moving_observed_object_to_another_interested_object_will_override_regular_update_message(  # noqa
         show, episode):
     # arrange
-    next_show = Show.objects.create(title='Another', description='Another')
+    next_show = ShowFactory.create()
     # act
     episode.show = next_show
     episode.title = 'Another title'
@@ -356,10 +329,9 @@ def test_moving_observed_object_to_another_interested_object_will_override_regul
 
 @mark.django_db
 def test_history_generated_for_interested_m2m_object_when_observed_object_removed(  # noqa
-        show, episode):
+        show, episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1, actor2)
     # act
     episode.cast.remove(actor1)
@@ -378,10 +350,9 @@ def test_history_generated_for_interested_m2m_object_when_observed_object_remove
 
 @mark.django_db
 def test_history_generated_for_interested_m2m_object_when_observed_object_added(  # noqa
-        show, episode):
+        show, episode, actors):
     # arrange
-    actor1 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor1, actor2 = actors
     episode.cast.add(actor1)
     # act
     episode.cast.add(actor2)
@@ -402,12 +373,8 @@ def test_history_generated_for_interested_m2m_object_when_observed_object_added(
 def test_history_generated_for_interested_object_referenced_by_generic_field(
         show):
     # act
-    show_url = Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street',
-        related_object=show
-    )
-    next_show = Show.objects.create(title='Another', description='Another')
+    show_url = LinkFactory.create(related_object=show)
+    next_show = ShowFactory.create()
     show_url.related_object = next_show
     show_url.save()
     # assert
@@ -437,12 +404,14 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
     assert episode_updated.history_type == '~'
     assert episode_updated.history_diff == ['episode']
     assert episode_updated.additional_data['episode'] == 'Updated Episode'
-    expected_data = {'id': str(show.pk),
-                     'title': 'Another title',
-                     'description': '',
-                     'links': '',
-                     'season': '',
-                     'specials': str(episode.pk)}
+    expected_data = {
+        'id': str(show.pk),
+        'title': 'Another title',
+        'description': show.description,
+        'links': '',
+        'season': '',
+        'specials': str(episode.pk),
+    }
     assert episode_updated.data == expected_data
     assert title_updated.history_type == '~'
     assert title_updated.history_diff == ['title']
@@ -454,42 +423,40 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
 @mark.parametrize('entity', ['show', 'episode'])
 def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
         entity, show, episode, writer):
+
     if entity == 'show':
         obj = show
         obj_history_count = 7
 
         def expected_data(url):
-            result = {'id': str(obj.pk),
-                      'title': 'Another title',
-                      'description': '',
-                      'links': str(url.pk),
-                      'season': '',
-                      'specials': '20'}
+            result = {
+                'id': str(obj.pk),
+                'title': obj.title,
+                'description': obj.description,
+                'links': str(url.pk),
+                'season': '',
+                'specials': str(episode.pk),
+            }
             return result
 
     else:
         obj = episode
         obj_history_count = 4
 
-        def expected_data(url):
-            result = {'id': str(obj.pk),
-                      'title': 'Another title',
-                      'description': '',
-                      # TODO: use url.show.pk
-                      #  after fixing the related_query_name issue
-                      #  (see tests/models.py)
-                      'show': str(show.pk),
-                      'season': None,
-                      'cast': '',
-                      'author': str(writer.pk),
-                      'co_authors': ''}
+        def expected_data(_):
+            result = {
+                'id': str(obj.pk),
+                'title': obj.title,
+                'description': obj.description,
+                'show': str(show.pk),
+                'season': None,
+                'cast': '',
+                'author': str(writer.pk),
+                'co_authors': '',
+            }
             return result
 
-    link = Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street',
-        related_object=obj
-    )
+    link = LinkFactory.create(related_object=obj)
 
     obj.title = 'Another title'
     link.url = 'https://pbs.org/another-title'

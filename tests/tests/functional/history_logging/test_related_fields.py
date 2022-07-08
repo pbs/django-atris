@@ -2,10 +2,11 @@ from pytest import mark
 
 from atris.models import HistoryLogging
 
-from tests.models import (
-    Show, Actor, Writer, Link, Voter, Group, Admin, Season, Episode, Episode2
+from tests.factories import (
+    AdminFactory, EpisodeFactory, LinkFactory, SeasonFactory, ShowFactory,
+    VoterFactory, WriterFactory
 )
-from tests.tests.functional.history_logging.conftest import history_format_fks
+from tests.conftest import history_format_fks
 
 
 @mark.django_db
@@ -40,7 +41,7 @@ def test_changes_to_many_to_one_relations_recorded_automatically(
 def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa
         show, season):
     # arrange
-    show2 = Show.objects.create(title='Mercy Street', description='')
+    show2 = ShowFactory.create()
     # act
     season.show = show2
     season.save()
@@ -58,23 +59,16 @@ def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referen
 @mark.django_db
 def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
     # arrange
-    show_url_2 = Link.objects.create(
-        name='Amazon link',
-        url='https://amazon.com/mercy-street',
-        related_object=show
-    )
-    show_url_3 = Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street',
-        related_object=show
+    show_url2, show_url3 = LinkFactory.create_batch(
+        size=2,
+        related_object=show,
     )
     # assert
     link_update_notif, link_added = show.history.all()[:2]
     assert link_update_notif.related_field_history is not None
     assert link_added.history_type == '~'
     assert link_added.history_diff == ['links']
-    expected_links = history_format_fks([
-        show_url_2.pk, show_url_3.pk])
+    expected_links = history_format_fks([show_url2.pk, show_url3.pk])
     assert link_added.data['links'] == expected_links
 
 
@@ -82,15 +76,13 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
 def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(  # noqa
         episode):
     # arrange
-    Link.objects.create(
-        name='PBS link',
-        url='https://pbs.org/mercy-street-ep3',
-        related_object=episode,
-    )
+    LinkFactory.create(related_object=episode)
     # assert
     special_history = episode.history.first()
-    expected_keys = {'id', 'title', 'description', 'show', 'season', 'cast',
-                     'author', 'co_authors'}  # no relation to Link
+    expected_keys = {
+        'id', 'title', 'description', 'show', 'season', 'cast',
+        'author', 'co_authors'
+    }  # no relation to Link
     assert set(special_history.data.keys()) == expected_keys
 
 
@@ -108,17 +100,19 @@ def test_one_to_one_relations_tracked_on_both_models(writer, episode):
 
 
 @mark.django_db
-def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
+def test_adding_to_many_to_many_relations_recorded_on_both_sides(
+        episode, actors):
     # arrange
-    actor3 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
     # assert
     cast_updated = episode.history.first()
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == history_format_fks([
-        actor3.pk, actor2.pk])
+        actor3.pk,
+        actor2.pk,
+    ])
     episode_update_notif, special_added = actor3.history.all()[:2]
     assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
@@ -132,10 +126,10 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode):
 
 
 @mark.django_db
-def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode):
+def test_removing_from_many_to_many_relations_recorded_on_both_sides(
+        episode, actors):
     # arrange
-    actor3 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
     episode.cast.remove(actor3)
     # assert
@@ -154,10 +148,9 @@ def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode):
 
 @mark.django_db
 def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_objects(  # noqa
-        episode):
+        episode, actors):
     # arrange
-    actor3 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
+    actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
     episode.cast.remove(actor3)
     # assert
@@ -173,11 +166,11 @@ def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_object
 
 
 @mark.django_db
-def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
+def test_clearing_many_to_many_relations_recorded_on_both_sides(
+        episode, actors):
     # arrange
-    actor3 = Actor.objects.create(name='McKinley Belcher III')
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
-    episode.cast.add(actor3, actor2)
+    actor2, actor3 = actors
+    episode.cast.add(actor2, actor3)
     episode.cast.clear()
     # assert
     assert episode.history.count() == 3
@@ -185,14 +178,14 @@ def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
     assert cast_updated.history_type == '~'
     assert cast_updated.history_diff == ['cast']
     assert cast_updated.data['cast'] == ''
-    assert actor3.history.count() == 5
-    episode_update_notif, special_added = actor3.history.all()[:2]
+    assert actor2.history.count() == 5
+    episode_update_notif, special_added = actor2.history.all()[:2]
     assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
     assert special_added.history_diff == ['filmography']
     assert special_added.data['filmography'] == ''
-    assert actor2.history.count() == 5
-    episode_update_notif, special_added = actor2.history.all()[:2]
+    assert actor3.history.count() == 5
+    episode_update_notif, special_added = actor3.history.all()[:2]
     assert episode_update_notif.related_field_history is not None
     assert special_added.history_type == '~'
     assert special_added.history_diff == ['filmography']
@@ -202,7 +195,7 @@ def test_clearing_many_to_many_relations_recorded_on_both_sides(episode):
 @mark.django_db
 def test_excluded_many_to_many_field_not_recorded_in_history(episode):
     # arrange
-    coauthor = Writer.objects.create(name='Walon Green')
+    coauthor = WriterFactory.create()
     episode.co_authors.add(coauthor)
     episode.co_authors.remove(coauthor)
     # assert
@@ -223,7 +216,7 @@ def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregis
     # arrange
     # Voter is not tracked in history but Group is so the group instances
     # should have history.
-    voter = Voter.objects.create(choice=choice, name='Joe')
+    voter = VoterFactory.create(choice=choice)
     group1, group2, group3 = groups
     # act
     voter.groups.set([group1, group2])
@@ -257,14 +250,11 @@ def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregis
 
 @mark.django_db
 def test_history_generated_for_object_through_reverse_m2m_relation_with_untracked_added_objects(  # noqa
-        choice):
+        choice, group):
     # arrange
     # Adding objects through the reverse many-to-many relation: Voters to a
     # Group. The voters will not have history but the group will.
-    group = Group.objects.create(name='GroupX')
-    voter1 = Voter.objects.create(choice=choice, name='Joe')
-    voter2 = Voter.objects.create(choice=choice, name='Mary')
-    voter3 = Voter.objects.create(choice=choice, name='Robin')
+    voter1, voter2, voter3 = VoterFactory.create_batch(size=3, choice=choice)
     # act
     group.voters.set([voter1, voter2])
     group.voters.add(voter3)
@@ -297,14 +287,12 @@ def test_history_generated_for_object_through_reverse_m2m_relation_with_untracke
 
 
 @mark.django_db
-def test_history_generated_for_object_with_m2m_field_to_untracked_object():  # noqa
+def test_history_generated_for_object_with_m2m_field_to_untracked_object(
+        group):
     # arrange
     # Group is tracked by history but Admin is not. History will be generated
     # only for Group.
-    group = Group.objects.create(name='GroupX')
-    admin1 = Admin.objects.create(name='Joe')
-    admin2 = Admin.objects.create(name='Mary')
-    admin3 = Admin.objects.create(name='Robin')
+    admin1, admin2, admin3 = AdminFactory.create_batch(size=3)
     # act
     group.admins.set([admin1, admin2])
     group.admins.add(admin3)
@@ -341,7 +329,7 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
     # arrange
     # Adding objects through the reverse many-to-many relation: Voters to a
     # Group. The voters will not have history but the group will.
-    admin = Admin.objects.create(name='Joe')
+    admin = AdminFactory.create()
     group1, group2, group3 = groups
     # act
     admin.groups.set([group1, group2])
@@ -374,13 +362,16 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
 
 
 @mark.django_db
-def test_additional_data_from_initialy_changed_instance_copied_to_history_of_fk_field(  # noqa
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_fk_field(  # noqa
         show):
-    # arrange
-    season = Season(title='S1', description='', show=show)
-    season.additional_data = {'where_from': 'Console', 'smth': 'Abc'}
     # act
-    season.save()
+    SeasonFactory.create(
+        show=show,
+        additional_data={
+            'where_from': 'Console',
+            'smth': 'Abc',
+        },
+    )
     # assert
     show_updated_with_season = show.history.first()
     assert show_updated_with_season.history_type == '~'
@@ -390,17 +381,17 @@ def test_additional_data_from_initialy_changed_instance_copied_to_history_of_fk_
 
 
 @mark.django_db
-def test_additional_data_from_initialy_changed_instance_copied_to_history_of_1_to_1_field(  # noqa
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_1_to_1_field(  # noqa
         writer, show):
-    # arrange
-    episode = Episode(title='Episode1',
-                      description='',
-                      show=show,
-                      author=writer)
-    episode.additional_data['where_from'] = 'API'
-    episode.additional_data['smth'] = 'Some new information'
     # act
-    episode.save()
+    episode = EpisodeFactory.create(
+        show=show,
+        author=writer,
+        additional_data={
+            'where_from': 'API',
+            'smth': 'Some new information',
+        },
+    )
     # assert
     writer_update_with_work = writer.history.get(
         history_type='~',
@@ -412,13 +403,9 @@ def test_additional_data_from_initialy_changed_instance_copied_to_history_of_1_t
 
 
 @mark.django_db
-def test_additional_data_from_initialy_changed_instance_copied_to_history_of_many_to_many_field(  # noqa
-        writer):
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_many_to_many_field(  # noqa
+        episode2, group):
     # arrange
-    episode2 = Episode2.objects.create(title='Episode2',
-                                       description='',
-                                       author=writer)
-    group = Group.objects.create(name='group1')
     episode2.additional_data = {'where_from': 'Space',
                                 'message': 'We come in peace!'}
     # act
@@ -434,9 +421,8 @@ def test_additional_data_from_initialy_changed_instance_copied_to_history_of_man
 
 
 @mark.django_db
-def test_reordering_many_to_many_does_not_generate_record(episode):
-    actor2 = Actor.objects.create(name='Suzanne Bertish')
-    actor3 = Actor.objects.create(name='McKinley Belcher III')
+def test_reordering_many_to_many_does_not_generate_record(episode, actors):
+    actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
     cast_updated = episode.history.first()
     # re-order m2m

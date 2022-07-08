@@ -1,59 +1,44 @@
+from pytest import mark
+
 from atris.models import find_m2m_field_name_by_model
 
-from tests.models import Episode, Actor, Writer, Special, Episode2, Group
+from tests.models import Actor, Episode, Episode2, Group, Special, Writer
 
 
-def test_field_name_returned_for_model_of_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Episode._meta, Actor, False)
-    # assert
-    assert result == 'cast'
+@mark.parametrize(
+    'instance_model, related_model, reverse_relationship, expected_name, '
+    'description', [
+        (Episode, Actor, False, 'cast',
+         'test name returned for model of related field'),
 
+        (Writer, Episode, True, 'contributions',
+         'test name returned for model of reverse related field'),
 
-def test_field_name_returned_for_model_of_reverse_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Writer._meta, Episode, True)
-    # assert
-    assert result == 'contributions'
+        (Special, Actor, False, 'cast',
+         'test name returned for proxy model of inherited related field'),
 
+        (Writer, Special, True, 'contributions',
+         'test name returned for proxy model of reverse related field'),
 
-def test_field_name_returned_for_proxy_model_of_inherited_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Special._meta, Actor, False)
-    # assert
-    assert result == 'cast'
+        (Episode2, Actor, False, 'cast',
+         'test name returned for model of inherited related field'),
 
+        (Writer, Episode2, True, 'contributions',
+         'test name returned for model of inherited reverse related field'),
 
-def test_field_name_returned_for_proxy_model_of_reverse_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Writer._meta, Special, True)
-    # assert
-    assert result == 'contributions'
+        (Episode2, Group, False, 'groups',
+         'test name returned for child model of own related field'),
 
-
-def test_field_name_returned_for_model_of_inherited_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Episode2._meta, Actor, False)
-    # assert
-    assert result == 'cast'
-
-
-def test_field_name_returned_for_model_of_inherited_reverse_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Writer._meta, Episode2, True)
-    # assert
-    assert result == 'contributions'
-
-
-def test_field_name_returned_for_child_model_of_own_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Episode2._meta, Group, False)
-    # assert
-    assert result == 'groups'
-
-
-def test_field_name_returned_for_child_model_of_own_reverse_related_field():
-    # act
-    result = find_m2m_field_name_by_model(Group._meta, Episode2, True)
-    # assert
-    assert result == 'episodes'
+        (Group, Episode2, True, 'episodes',
+         'test name returned for child model of own reverse related field'),
+    ],
+)
+def test_m2m_field_name_returned_for_model(
+    instance_model, related_model, reverse_relationship, expected_name,
+    description,
+):
+    assert expected_name == find_m2m_field_name_by_model(
+        instance_model._meta,
+        related_model,
+        reverse_relationship,
+    )

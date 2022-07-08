@@ -1,5 +1,3 @@
-from __future__ import print_function, unicode_literals
-
 from datetime import timedelta
 import logging
 
@@ -190,9 +188,6 @@ class AbstractHistoricalRecord(models.Model):
     objects = HistoricalRecordQuerySet.as_manager()
 
     def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
         return '{history_type} {content_type} id={object_id}'.format(
             history_type=self.get_history_type_display(),
             content_type=self.content_type.model,

@@ -169,12 +169,12 @@ Example of usage in code:
 * Get the snapshot of the bar instance created::
 
     >>> bar.history.first().data
-    {u'field_1': u'aaa', u'field_2': u'0', u'fk_field': u'1'}
+    {'field_1': 'aaa', 'field_2': '0', 'fk_field': '1'}
 
 * Get the additional data of the bar instance::
 
     >>> bar.history.first().additional_data
-    {u'modified_from':u'code'}
+    {'modified_from': 'code'}
 
 * If you have a situation where the user cannot be determined from the django middleware you can also do the following::
 
@@ -182,7 +182,7 @@ Example of usage in code:
     >>> # Some other changes to bar so that a historical record will be generated.
     >>> bar.save()
     >>> bar.history.first().history_user
-    u'username'
+    'username'
 
 * You can also mark a user such that the history for that user does not get saved. You can do so either by user name(KEEP IN MIND: user name is considered the full name or email or user name of the user instance associated with the history, depending on which is available first, in that order) or ID. You can use this to tell atris to ignore changes made by certain users such as a smoke test user::
 

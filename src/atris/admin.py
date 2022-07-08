@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models, connections
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from atris.models import (
     ArchivedHistoricalRecord, HistoricalRecord, history_logging,

@@ -1,19 +1,20 @@
 django-atris
 ============
 
-Django-atris stores a snapshot of each tracked model on create/
-update/delete operations.
+Django-atris stores a snapshot of each tracked model on create/update/delete operations.
 
 Snapshots are available in a global form as well.
 
 This app requires:
 
-- Django>=1.10:
-    - for Django < 1.9      please use django-atris <1.0.0
-    - for Django < 1.10     please use django-atris <1.2.0
-    - for Django > 2.0.0    please use django-atris >1.2.1
+- Django >= 1.10:
+    - for Django < 1.9      please use django-atris < 1.0.0
+    - for Django < 1.10     please use django-atris < 1.2.0
+    - for Django > 2.0.0    please use django-atris > 1.2.1
 - Postgresql
-- Python>=2.7 or Python>=3.4 (after Django 2)
+- Python:
+    - for django-atris < 2.0.0  please use Python >= 2.7 or Python >= 3.4 (after Django 2)
+    - for django-atris >= 2.0.0 please use Python >= 3.6
 
 Integration guide
 -----------------
@@ -23,7 +24,7 @@ In order to use the app you must do the following:
 * Add 'atris' to INSTALLED_APPS in settings
 * You MUST have 'django.contrib.postgres' in your INSTALLED_APPS
 * Add 'atris.middleware.LoggingRequestMiddleware' to MIDDLEWARE in order for the app to be able to get the user which made the changes
-* Put a field (named as you wish) in the model class that you desire to track that contains a HistoryLogging instance (i.e. history = HistoryLogging() )
+* Put a field (named as you wish) in the model class that you desire to track that contains a HistoryLogging instance ( i.e. history = HistoryLogging() )
 
 Additional features:
 
@@ -34,7 +35,7 @@ Additional features:
                    After creating that dict, use it when instantiating the
                    HistoryLogging field::
 
-                        additional_data = {'changed_from':'djadmin'}
+                        additional_data = {'changed_from': 'djadmin'}
                         history = HistoryLogging(additional_data_param_name='additional_data')
 
 - Exclude fields -
@@ -104,9 +105,14 @@ Example of usage in code:
     ...   field_2 = models.IntField()
     ...   last_modified = models.DateTimeField(auto_now=True)
     ...   excluded_fields = ['last_modified']
-    ...   ignore_history_for_users = {'user_ids': [1010101], 'user_names': ['ignore_user']}
-    ...   history = HistoryLogging(excluded_fields='excluded_fields',
-    ...                            ignore_history_for_users='ignore_history_for_users)
+    ...   ignore_history_for_users = {
+    ...       'user_ids': [1010101],
+    ...       'user_names': ['ignore_user'],
+    ...   }
+    ...   history = HistoryLogging(
+    ...       excluded_fields='excluded_fields',
+    ...       ignore_history_for_users='ignore_history_for_users,
+    ...   )
 
     >>> class Bar(models.Model):
     ...   field_1 = models.CharField(max_length=255)
@@ -117,9 +123,11 @@ Example of usage in code:
     ...   additional_data = {'modified_from': 'code'}
     ...   excluded_fields = ['last_modified']
     ...   interested_related_fields = ['fk_field']
-    ...   history = HistoryLogging('additional_data',
-    ...                            'excluded_fields',
-    ...                            interested_related_fields='interested_related_fields')
+    ...   history = HistoryLogging(
+    ...       'additional_data',
+    ...       'excluded_fields',
+    ...       interested_related_fields='interested_related_fields',
+    ...   )
 
     >>> foo = Foo.objects.create(field_1='aaa', field_2=0)
     >>> foo_1 = Foo.objects.create(field_1='bar', field_2=1)
@@ -150,7 +158,7 @@ Example of usage in code:
 
     >>> HistoricalRecord.objects.all()
     [<HistoricalRecord: Update foo id=1>, <HistoricalRecord: Create bar id=1>,
-      <HistoricalRecord: Create foo id=2>,<HistoricalRecord: Create foo id=1>]
+      <HistoricalRecord: Create foo id=2>, <HistoricalRecord: Create foo id=1>]
 
   Note that an "update" historical record has been created for `foo` when a
   bar object was linked to it.
@@ -213,3 +221,8 @@ Changelog
 
 1.3.4:
     * Add support for Django 2.2
+
+2.0.0:
+    * Dropped support for Django < 2.2 and Python < 3.6
+    * Fixed history generation issue after saving an instance for the first time after a new field was added to the model
+        - This issue was causing historical records to be generated when saving (without any changes) existing instances of tracked models

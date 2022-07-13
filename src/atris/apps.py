@@ -2,12 +2,13 @@ from django.apps import AppConfig
 
 
 class AtrisConfig(AppConfig):
-    name = 'atris'
-    label = 'atris'
-    verbose_name = 'Atris Model History'
+    name = "atris"
+    label = "atris"
+    verbose_name = "Atris Model History"
 
     def ready(self):
         from atris.models import registered_models
+
         for sender in registered_models:
             # We have access to all the fields of a Django model only after all
             # models have been loaded.

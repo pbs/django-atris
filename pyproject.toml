@@ -1,0 +1,10 @@
+[tool.black]
+line-length = 79
+extend-exclude = '\/migrations\/'
+
+[tool.isort]
+profile = "black"
+line_length = 79
+lines_after_imports = 2
+lines_between_types = 1
+skip_glob = ['*/migrations/*']

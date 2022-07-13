@@ -1,16 +1,27 @@
-from datetime import datetime
 import random
-from string import ascii_letters
 import uuid
+
+from datetime import datetime
+from string import ascii_letters
 
 from django.contrib.contenttypes.models import ContentType
 
 from atris.models import ArchivedHistoricalRecord, HistoricalRecord
 from atris.models.helpers import get_field_internal_type
-
 from tests.models import (
-    Actor, Admin, Choice, Episode, Episode2, Group, Link, Poll, Season, Show,
-    Special, Voter, Writer
+    Actor,
+    Admin,
+    Choice,
+    Episode,
+    Episode2,
+    Group,
+    Link,
+    Poll,
+    Season,
+    Show,
+    Special,
+    Voter,
+    Writer,
 )
 
 
@@ -19,29 +30,29 @@ def random_integer():
 
 
 def random_string():
-    return ''.join(random.choice(ascii_letters) for _ in range(10))
+    return "".join(random.choice(ascii_letters) for _ in range(10))
 
 
 class AbstractFactory:
     MODEL = None
 
     IGNORED_TYPES = {
-        'ForeignKey',
-        'GenericForeignKey',
-        'ManyToManyField',
-        'OneToOneField',
+        "ForeignKey",
+        "GenericForeignKey",
+        "ManyToManyField",
+        "OneToOneField",
     }
 
     DEFAULT_VALUES_FOR_INTERNAL_TYPE = {
-        'AutoField': lambda: random_integer(),
-        'DateTimeField': lambda: datetime.now(),
-        'CharField': lambda: random_string(),
-        'IntegerField': lambda: random_integer(),
-        'UUIDField': lambda: uuid.uuid4(),
-        'PositiveIntegerField': lambda: random_integer(),
-        'ArrayField': lambda: [],
-        'JSONField': lambda: {},
-        'BooleanField': lambda: random.choice([True, False]),
+        "AutoField": lambda: random_integer(),
+        "DateTimeField": lambda: datetime.now(),
+        "CharField": lambda: random_string(),
+        "IntegerField": lambda: random_integer(),
+        "UUIDField": lambda: uuid.uuid4(),
+        "PositiveIntegerField": lambda: random_integer(),
+        "ArrayField": lambda: [],
+        "JSONField": lambda: {},
+        "BooleanField": lambda: random.choice([True, False]),
     }
 
     # Overrides default value for the field type
@@ -64,15 +75,21 @@ class AbstractFactory:
         other_fields = [
             (f.name, get_field_internal_type(f))
             for f in cls.MODEL._meta.get_fields()
-            if (f.name not in cls.FIELDS_NOT_SPECIFIED_BY_DEFAULT
-                and f.name not in create_kwargs)
+            if (
+                f.name not in cls.FIELDS_NOT_SPECIFIED_BY_DEFAULT
+                and f.name not in create_kwargs
+            )
         ]
 
-        create_kwargs.update({
-            field_name: cls.DEFAULT_VALUES_FOR_INTERNAL_TYPE.get(field_type)()
-            for field_name, field_type in other_fields
-            if field_type not in cls.IGNORED_TYPES
-        })
+        create_kwargs.update(
+            {
+                field_name: cls.DEFAULT_VALUES_FOR_INTERNAL_TYPE.get(
+                    field_type
+                )()
+                for field_name, field_type in other_fields
+                if field_type not in cls.IGNORED_TYPES
+            }
+        )
 
         return cls.MODEL.objects.create(**create_kwargs)
 
@@ -85,19 +102,21 @@ class HistoricalRecordFactory(AbstractFactory):
     MODEL = HistoricalRecord
 
     DEFAULT_VALUES = {
-        'object_id': lambda: str(random_integer()),
-        'history_type': lambda: random.choice([
-            HistoricalRecord.CREATE,
-            HistoricalRecord.UPDATE,
-            HistoricalRecord.DELETE,
-        ]),
-        'content_type': lambda: random.choice(
+        "object_id": lambda: str(random_integer()),
+        "history_type": lambda: random.choice(
+            [
+                HistoricalRecord.CREATE,
+                HistoricalRecord.UPDATE,
+                HistoricalRecord.DELETE,
+            ]
+        ),
+        "content_type": lambda: random.choice(
             [ct for ct in ContentType.objects.all()],
         ),
     }
 
     FIELDS_NOT_SPECIFIED_BY_DEFAULT = [
-        'history_date',
+        "history_date",
     ]
 
 
@@ -133,7 +152,7 @@ class LinkFactory(AbstractFactory):
     MODEL = Link
 
     DEFAULT_VALUES = {
-        'content_type': lambda: random.choice(
+        "content_type": lambda: random.choice(
             [ct for ct in ContentType.objects.all()],
         ),
     }

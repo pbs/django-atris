@@ -12,42 +12,42 @@ HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):
-    EXISTING_HISTORY_FOUND = 'Existing history found, skipping model'
+    EXISTING_HISTORY_FOUND = "Existing history found, skipping model"
 
     SELECT_BATCH_SIZE = 1000
     CREATE_BATCH_SIZE = 1000
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--select-batch-size',
-            dest='select_batch_size',
+            "--select-batch-size",
+            dest="select_batch_size",
             type=int,
             default=self.SELECT_BATCH_SIZE,
-            help='The number of target objects that will be retrieved from '
-                 'the DB at one time.',
+            help="The number of target objects that will be retrieved from "
+            "the DB at one time.",
         )
         parser.add_argument(
-            '--create-batch-size',
-            dest='create_batch_size',
+            "--create-batch-size",
+            dest="create_batch_size",
             type=int,
             default=self.CREATE_BATCH_SIZE,
-            help='The number of history objects that will be created '
-                 'in one batch. Should be at most SELECT_BATCH_SIZE.',
+            help="The number of history objects that will be created "
+            "in one batch. Should be at most SELECT_BATCH_SIZE.",
         )
 
     def handle(self, *args, **options):
         for model, model_specific_info in registered_models.items():
             if HistoricalRecord.objects.by_model(model).exists():
                 self.stderr.write(
-                    '{msg} {model}\n'.format(
+                    "{msg} {model}\n".format(
                         msg=self.EXISTING_HISTORY_FOUND,
                         model=model,
                     ),
                 )
                 continue
-            self.stdout.write('Initializing history for {}\n'.format(model))
+            self.stdout.write("Initializing history for {}\n".format(model))
             additional_data_param_name = model_specific_info[
-                'additional_data_param_name'
+                "additional_data_param_name"
             ]
             additional_data_field = getattr(
                 model,
@@ -55,14 +55,15 @@ class Command(BaseCommand):
                 {},
             )
             excluded_fields_param_name = model_specific_info[
-                'excluded_fields_param_name']
+                "excluded_fields_param_name"
+            ]
             excluded_fields = getattr(model, excluded_fields_param_name, [])
             create_history_for_model = ModelHistoryCreator(
                 model,
                 additional_data_field,
                 excluded_fields,
-                options['select_batch_size'],
-                options['create_batch_size'],
+                options["select_batch_size"],
+                options["create_batch_size"],
                 self.stdout,
             )
             try:
@@ -70,14 +71,20 @@ class Command(BaseCommand):
                     create_history_for_model()
             except DatabaseError as e:
                 self.stderr.write(
-                    'Error creating history for {}: {}'.format(model, e),
+                    "Error creating history for {}: {}".format(model, e),
                 )
 
 
 class ModelHistoryCreator(object):
-
-    def __init__(self, model, additional_data_field, excluded_fields,
-                 select_batch_size, create_batch_size, output):
+    def __init__(
+        self,
+        model,
+        additional_data_field,
+        excluded_fields,
+        select_batch_size,
+        create_batch_size,
+        output,
+    ):
         self.model = model
         self.additional_data_field = additional_data_field
         self.excluded_fields = excluded_fields
@@ -89,7 +96,7 @@ class ModelHistoryCreator(object):
         objects = self.model.objects
         number_of_batches = ceil(objects.count() / self.select_batch_size)
         self.output.write(
-            'Processing data in {} batches of {} target objects.\n'.format(
+            "Processing data in {} batches of {} target objects.\n".format(
                 number_of_batches,
                 self.select_batch_size,
             ),
@@ -99,7 +106,7 @@ class ModelHistoryCreator(object):
             end = start + self.select_batch_size
             self.create_history_for_objects(objects.all()[start:end])
             self.output.write(
-                'Finished batch #{} of {}.\n'.format(
+                "Finished batch #{} of {}.\n".format(
                     multiplicity + 1,
                     number_of_batches,
                 ),

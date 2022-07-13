@@ -10,7 +10,7 @@ class HistoricalRecord(AbstractHistoricalRecord):
 
 def get_history_model():
     try:
-        app_label, model = settings.ATRIS_HISTORY_MODEL.lower().split('.')
+        app_label, model = settings.ATRIS_HISTORY_MODEL.lower().split(".")
     except AttributeError:
         return HistoricalRecord
     else:

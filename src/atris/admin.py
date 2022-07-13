@@ -1,22 +1,24 @@
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
-from django.db import models, connections
+from django.db import connections, models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from atris.models import (
-    ArchivedHistoricalRecord, HistoricalRecord, history_logging,
+    ArchivedHistoricalRecord,
+    HistoricalRecord,
+    history_logging,
 )
 
 
 class ContentTypeListFilter(admin.SimpleListFilter):
     # Human-readable title which will be displayed in the
     # right admin sidebar just above the filter options.
-    title = _('Content type')
+    title = _("Content type")
 
     # Parameter for the filter that will be used in the URL query.
-    parameter_name = 'content_type'
+    parameter_name = "content_type"
 
     def lookups(self, request, model_admin):
         """
@@ -51,20 +53,20 @@ class ApproxCountPgQuerySet(models.query.QuerySet):
     """approximate unconstrained count(*) with reltuples from pg_class"""
 
     def count(self):
-        if hasattr(connections[self.db].client.connection, 'pg_version'):
+        if hasattr(connections[self.db].client.connection, "pg_version"):
             query = self.query
             no_filtration_used = (
-                    not query.where
-                    and query.high_mark is None
-                    and query.low_mark == 0
-                    and not query.select
-                    and not query.group_by
-                    and not query.having
-                    and not query.distinct
+                not query.where
+                and query.high_mark is None
+                and query.low_mark == 0
+                and not query.select
+                and not query.group_by
+                and not query.having
+                and not query.distinct
             )
             if no_filtration_used:
                 parts = [
-                    p.strip('"') for p in self.model._meta.db_table.split('.')
+                    p.strip('"') for p in self.model._meta.db_table.split(".")
                 ]
                 if 1 <= len(parts) <= 2:
                     cursor = connections[self.db].cursor()
@@ -89,23 +91,31 @@ class ApproxCountPgQuerySet(models.query.QuerySet):
 
 class GenericHistoryAdmin(admin.ModelAdmin):
     list_display = (
-        'object_id', 'content_type', 'history_date', 'history_type',
-        'history_user',
+        "object_id",
+        "content_type",
+        "history_date",
+        "history_type",
+        "history_user",
     )
 
     fields = [
-        'object_id', 'content_type', 'history_date', 'history_type',
-        'history_user', 'difference_to_previous', 'fields_that_differ',
-        'history_snapshot', 'more_info', 'related_field_history_admin',
+        "object_id",
+        "content_type",
+        "history_date",
+        "history_type",
+        "history_user",
+        "difference_to_previous",
+        "fields_that_differ",
+        "history_snapshot",
+        "more_info",
+        "related_field_history_admin",
     ]
 
     readonly_fields = fields
 
-    search_fields = (
-        'object_id',
-    )
+    search_fields = ("object_id",)
 
-    list_filter = (ContentTypeListFilter, 'history_type')
+    list_filter = (ContentTypeListFilter, "history_type")
 
     show_full_result_count = False
 
@@ -127,25 +137,31 @@ class GenericHistoryAdmin(admin.ModelAdmin):
 
     def fields_that_differ(self, obj):
         if obj.history_diff:
-            return ', '.join(obj.history_diff)
+            return ", ".join(obj.history_diff)
         return None
 
     def _dict_to_table(self, dictionary):
-        table = '<table style="border: 1px solid #eee;">' + ''.join([
-            '<tr><td style="border: 1px solid #eee;">{}</td> <td>{}'
-            '</td></tr>'.format(
-                key,
-                val,
+        table = (
+            '<table style="border: 1px solid #eee;">'
+            + "".join(
+                [
+                    '<tr><td style="border: 1px solid #eee;">{}</td> <td>{}'
+                    "</td></tr>".format(
+                        key,
+                        val,
+                    )
+                    for (key, val) in dictionary.items()
+                ]
             )
-            for (key, val) in dictionary.items()
-        ]) + '</table>'
+            + "</table>"
+        )
 
         return mark_safe(table)
 
     def related_field_history_admin(self, obj):
         if obj.related_field_history:
             related_url = reverse(
-                'admin:atris_historicalrecord_change',
+                "admin:atris_historicalrecord_change",
                 args=[obj.related_field_history.pk],
             )
             absolute_uri = self._request.build_absolute_uri(related_url)
@@ -156,9 +172,9 @@ class GenericHistoryAdmin(admin.ModelAdmin):
             )
             return mark_safe(html)
         else:
-            return '--'
+            return "--"
 
-    related_field_history_admin.short_description = 'Related Field History'
+    related_field_history_admin.short_description = "Related Field History"
 
     def has_add_permission(self, request, obj=None):
         return False

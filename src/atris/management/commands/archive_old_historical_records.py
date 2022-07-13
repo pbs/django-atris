@@ -1,14 +1,15 @@
-from datetime import timedelta
 import logging
 
+from datetime import timedelta
+
 from django.core.management import BaseCommand
-from django.db import transaction, connection
+from django.db import connection, transaction
 from django.utils.timezone import now
 
 from atris.models import get_history_model
 
 
-logger = logging.getLogger('old_history_archiving')
+logger = logging.getLogger("old_history_archiving")
 HistoricalRecord = get_history_model()
 
 
@@ -21,29 +22,29 @@ class Command(BaseCommand):
         the "atris_archivedhistoricalrecord" table.
     """
 
-    PARAM_ERROR = 'You must supply either the days or the weeks param'
+    PARAM_ERROR = "You must supply either the days or the weeks param"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--days',
-            dest='days',
+            "--days",
+            dest="days",
             type=int,
             default=None,
-            help='Any historical record older than the number of days '
-                 'specified gets archived.',
+            help="Any historical record older than the number of days "
+            "specified gets archived.",
         )
         parser.add_argument(
-            '--weeks',
-            dest='weeks',
+            "--weeks",
+            dest="weeks",
             type=int,
             default=None,
-            help='Any historical record older than the number of '
-                 'months specified gets archived.',
+            help="Any historical record older than the number of "
+            "months specified gets archived.",
         )
 
     def handle(self, *args, **options):
-        days = options.get('days')
-        weeks = options.get('weeks')
+        days = options.get("days")
+        weeks = options.get("weeks")
         if not (days or weeks):
             self.stderr.write(
                 "{msg}\n".format(
@@ -54,7 +55,7 @@ class Command(BaseCommand):
         old_history_entries = HistoricalRecord.objects.older_than(days, weeks)
         handled_entries_nr = old_history_entries.count()
         self.migrate_data(days, weeks)
-        self.stdout.write('{} archived.\n'.format(handled_entries_nr))
+        self.stdout.write("{} archived.\n".format(handled_entries_nr))
 
     @transaction.atomic
     def migrate_data(self, days=None, weeks=None):
@@ -67,7 +68,7 @@ class Command(BaseCommand):
         td = timedelta(weeks=weeks) if weeks else timedelta(days=days)
         older_than_date = now() - td
         cursor = connection.cursor()
-        fields_str = ','.join(
+        fields_str = ",".join(
             [field.attname for field in HistoricalRecord._meta.fields]
         )
         query = (

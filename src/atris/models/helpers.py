@@ -1,6 +1,7 @@
 import ast
 import json
 import re
+
 from typing import Dict, List, Optional, Type, Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -10,10 +11,10 @@ from django.db.models import Model
 
 
 def get_diff_fields(
-        model: Union[Model, Type[Model]],
-        data: Dict,
-        previous_data: Dict,
-        excluded_fields_names: List[str],
+    model: Union[Model, Type[Model]],
+    data: Dict,
+    previous_data: Dict,
+    excluded_fields_names: List[str],
 ) -> Optional[List[str]]:
     """
 
@@ -55,9 +56,9 @@ def get_default_value(field):
         return str(default_value) if default_value is not None else None
     except AttributeError as e:
         error_message = str(e)
-        if 'ManyTo' in error_message:
+        if "ManyTo" in error_message:
             # ManyToManyRel or ManyToOneRel
-            return ''
+            return ""
         return None
 
 
@@ -66,22 +67,22 @@ def get_field_internal_type(field):
         return field.get_internal_type().strip()
     except AttributeError as e:
         if type(field) == GenericForeignKey:
-            return 'GenericForeignKey'
+            return "GenericForeignKey"
         else:
             raise e
 
 
 def is_different(old, new, field):
     # serializing/deserializing a json object can change key order
-    id_list = re.compile(r'^(\d+,\s)+\d+$')
-    new_list = re.match(id_list, new or '')
-    prev_list = re.match(id_list, old or '')
+    id_list = re.compile(r"^(\d+,\s)+\d+$")
+    new_list = re.match(id_list, new or "")
+    prev_list = re.match(id_list, old or "")
     is_list = new_list and prev_list
     is_relation_to_many = (field.one_to_many or field.many_to_many) and is_list
 
     field_internal_type = get_field_internal_type(field=field)
     # django jsonfield allows both python dicts or raw json
-    if field_internal_type == 'JSONField':
+    if field_internal_type == "JSONField":
         try:
             # for valid python dict
             old = ast.literal_eval(old) if old else old
@@ -92,9 +93,9 @@ def is_different(old, new, field):
             new = ast.literal_eval(new) if new else new
         except ValueError:
             new = json.loads(new) if new else new
-    elif is_relation_to_many or field_internal_type == 'ArrayField':
-        old = set(old.split(', ')) if old else old
-        new = set(new.split(', ')) if new else new
+    elif is_relation_to_many or field_internal_type == "ArrayField":
+        old = set(old.split(", ")) if old else old
+        new = set(new.split(", ")) if new else new
     return old != new
 
 
@@ -115,8 +116,8 @@ def get_instance_field_data(instance):
         except ObjectDoesNotExist:
             value = None
         if field.many_to_many or field.one_to_many:
-            ids = from_writable_db(value).values_list('pk', flat=True)
-            data[name] = ', '.join([str(e) for e in ids.order_by('pk')])
+            ids = from_writable_db(value).values_list("pk", flat=True)
+            data[name] = ", ".join([str(e) for e in ids.order_by("pk")])
         elif field.one_to_one and not field.concrete:
             data[name] = str(value.pk) if value is not None else None
         else:
@@ -125,10 +126,10 @@ def get_instance_field_data(instance):
 
 
 def get_attribute_name_from_field(field, flat_fk=True):
-    accessor_for_simple_fields = 'attname' if flat_fk else 'name'
-    if hasattr(field, 'fk_field'):  # generic foreign key
+    accessor_for_simple_fields = "attname" if flat_fk else "name"
+    if hasattr(field, "fk_field"):  # generic foreign key
         attname = field.fk_field
-    elif hasattr(field, 'get_accessor_name'):  # many-to-* relation field
+    elif hasattr(field, "get_accessor_name"):  # many-to-* relation field
         attname = field.get_accessor_name()
     elif hasattr(field, accessor_for_simple_fields):
         # regular field or foreign key

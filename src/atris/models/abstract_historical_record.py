@@ -1,11 +1,12 @@
-from datetime import timedelta
 import logging
+
+from datetime import timedelta
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.exceptions import FieldDoesNotExist
-from django.db import models, connection
+from django.db import connection, models
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class HistoricalRecordQuerySet(QuerySet):
-
     def by_model_and_model_id(self, model, model_id):
         """
         Gets historical records by model and model id, so, basically the
@@ -90,12 +90,12 @@ class HistoricalRecordQuerySet(QuerySet):
         :rtype list(HistoricalRecord)
         """
         if not (days or weeks):
-            logger.error('You must supply either the days or the weeks param')
+            logger.error("You must supply either the days or the weeks param")
             return
         elif days and weeks:
             logger.info(
-                'You supplied both days and weeks, '
-                'the weeks param will be used as the delimiter.'
+                "You supplied both days and weeks, "
+                "the weeks param will be used as the delimiter."
             )
         td = timedelta(weeks=weeks) if weeks else timedelta(days=days)
         return self.filter(history_date__lte=now() - td)
@@ -116,16 +116,16 @@ class HistoricalRecordQuerySet(QuerySet):
             object_id=object_id,
             id__lt=history_id,
         )
-        return main_qs.order_by('-history_date').first()
+        return main_qs.order_by("-history_date").first()
 
     def approx_count(self):
         """
-            Takes a queryset and generates a fast approximate count(*) for it.
-            This is required because postgresql count(*) has to go through
-            all the entries in the database, making it extremely slow for
-            large tables.
-            :return: int representing approx count(*)
-            """
+        Takes a queryset and generates a fast approximate count(*) for it.
+        This is required because postgresql count(*) has to go through
+        all the entries in the database, making it extremely slow for
+        large tables.
+        :return: int representing approx count(*)
+        """
         table_name = self.model._meta.db_table
         cursor = connection.cursor()
         cursor.execute(
@@ -141,14 +141,14 @@ class HistoricalRecordQuerySet(QuerySet):
 
 class AbstractHistoricalRecord(models.Model):
 
-    CREATE = '+'
-    UPDATE = '~'
-    DELETE = '-'
+    CREATE = "+"
+    UPDATE = "~"
+    DELETE = "-"
 
     HISTORY_TYPES = (
-        (CREATE, 'Create'),
-        (UPDATE, 'Update'),
-        (DELETE, 'Delete'),
+        (CREATE, "Create"),
+        (UPDATE, "Update"),
+        (DELETE, "Delete"),
     )
 
     content_type = models.ForeignKey(
@@ -157,8 +157,8 @@ class AbstractHistoricalRecord(models.Model):
     )
     object_id = models.TextField()
     content_object = GenericForeignKey(
-        'content_type',
-        'object_id',
+        "content_type",
+        "object_id",
         for_concrete_model=False,
     )
 
@@ -178,9 +178,9 @@ class AbstractHistoricalRecord(models.Model):
 
     data = JSONField()
     related_field_history = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.CASCADE,
-        related_name='referenced_objects_history',
+        related_name="referenced_objects_history",
         null=True,
         blank=True,
     )
@@ -188,17 +188,17 @@ class AbstractHistoricalRecord(models.Model):
     objects = HistoricalRecordQuerySet.as_manager()
 
     def __str__(self):
-        return '{history_type} {content_type} id={object_id}'.format(
+        return "{history_type} {content_type} id={object_id}".format(
             history_type=self.get_history_type_display(),
             content_type=self.content_type.model,
             object_id=self.object_id,
         )
 
     class Meta:
-        app_label = 'atris'
-        ordering = ['-history_date']
+        app_label = "atris"
+        ordering = ["-history_date"]
         abstract = True
-        index_together = ['object_id', 'history_date']
+        index_together = ["object_id", "history_date"]
 
     @property
     def previous_version(self):
@@ -216,19 +216,19 @@ class AbstractHistoricalRecord(models.Model):
         :return: Said string.
         :rtype String
         """
-        diff_string = '{}d '.format(self.get_history_type_display())
+        diff_string = "{}d ".format(self.get_history_type_display())
         if self.history_type == self.UPDATE:
             if not self.history_diff:
                 if not self.previous_version:
-                    diff_string = 'No prior information available.'
+                    diff_string = "No prior information available."
                 else:
-                    diff_string += 'with no change'
+                    diff_string += "with no change"
             else:
                 verbose_names = [
                     self._get_field_name_display(field_name)
                     for field_name in self.history_diff
                 ]
-                diff_string += ', '.join(sorted(verbose_names))
+                diff_string += ", ".join(sorted(verbose_names))
         else:
             diff_string += self.content_type.name
         return diff_string
@@ -238,8 +238,8 @@ class AbstractHistoricalRecord(models.Model):
         try:
             field = model._meta.get_field(field_name)
         except FieldDoesNotExist:
-            return field_name.replace('_', ' ').title()
-        if hasattr(field, 'verbose_name'):
+            return field_name.replace("_", " ").title()
+        if hasattr(field, "verbose_name"):
             return str(field.verbose_name)
         else:
-            return field.name.replace('_', ' ').title()
+            return field.name.replace("_", " ").title()

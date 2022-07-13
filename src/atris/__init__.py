@@ -1,1 +1,1 @@
-default_app_config = 'atris.apps.AtrisConfig'
+default_app_config = "atris.apps.AtrisConfig"

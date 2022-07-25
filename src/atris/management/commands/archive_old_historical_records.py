@@ -30,32 +30,32 @@ class Command(BaseCommand):
             dest="days",
             type=int,
             default=None,
-            help="Any historical record older than the number of days "
-            "specified gets archived.",
+            help=(
+                "Any historical record older than "
+                "the number of days specified gets archived."
+            ),
         )
         parser.add_argument(
             "--weeks",
             dest="weeks",
             type=int,
             default=None,
-            help="Any historical record older than the number of "
-            "months specified gets archived.",
+            help=(
+                "Any historical record older than "
+                "the number of months specified gets archived."
+            ),
         )
 
     def handle(self, *args, **options):
         days = options.get("days")
         weeks = options.get("weeks")
         if not (days or weeks):
-            self.stderr.write(
-                "{msg}\n".format(
-                    msg=self.PARAM_ERROR,
-                ),
-            )
+            self.stderr.write(f"{self.PARAM_ERROR}\n")
             return
         old_history_entries = HistoricalRecord.objects.older_than(days, weeks)
         handled_entries_nr = old_history_entries.count()
         self.migrate_data(days, weeks)
-        self.stdout.write("{} archived.\n".format(handled_entries_nr))
+        self.stdout.write(f"{handled_entries_nr} archived.\n")
 
     @transaction.atomic
     def migrate_data(self, days=None, weeks=None):

@@ -42,9 +42,7 @@ class TestArchiveCommand:
         assert "1 archived." in out.getvalue()
         assert ArchivedHistoricalRecord.objects.count() == 1
 
-    def test_archive_history_event_with_both_weeks_and_days_params(
-        self, caplog
-    ):
+    def test_archive_history_event_with_both_weeks_and_days_params(self, caplog):
         # if both days and weeks params are supplied to the command,
         # the weeks param will be used and a message will be logged
         out = StringIO()

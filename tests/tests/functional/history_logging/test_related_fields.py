@@ -28,9 +28,7 @@ def test_related_object_recorded_with_module_name_if_no_related_name_specified(
 
 
 @mark.django_db
-def test_changes_to_many_to_one_relations_recorded_automatically(
-    show, episode, season
-):
+def test_changes_to_many_to_one_relations_recorded_automatically(show, episode, season):
     # assert
     season_added, episode_update_notif, special_added = show.history.all()[:3]
     assert season_added.history_type == "~"
@@ -44,7 +42,7 @@ def test_changes_to_many_to_one_relations_recorded_automatically(
 
 
 @mark.django_db
-def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa
+def test_changing_a_foreign_key_value_reflected_on_both_past_and_present_referenced_objects(  # noqa: E501
     show, season
 ):
     # arrange
@@ -80,7 +78,7 @@ def test_generic_foreign_keys_backed_by_a_generic_relation_are_recorded(show):
 
 
 @mark.django_db
-def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(  # noqa
+def test_generic_foreign_keys_not_backed_by_a_generic_relation_are_not_recorded(
     episode,
 ):
     # arrange
@@ -117,9 +115,7 @@ def test_one_to_one_relations_tracked_on_both_models(writer, episode):
 
 
 @mark.django_db
-def test_adding_to_many_to_many_relations_recorded_on_both_sides(
-    episode, actors
-):
+def test_adding_to_many_to_many_relations_recorded_on_both_sides(episode, actors):
     # arrange
     actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
@@ -146,9 +142,7 @@ def test_adding_to_many_to_many_relations_recorded_on_both_sides(
 
 
 @mark.django_db
-def test_removing_from_many_to_many_relations_recorded_on_both_sides(
-    episode, actors
-):
+def test_removing_from_many_to_many_relations_recorded_on_both_sides(episode, actors):
     # arrange
     actor2, actor3 = actors
     episode.cast.add(actor3, actor2)
@@ -168,7 +162,7 @@ def test_removing_from_many_to_many_relations_recorded_on_both_sides(
 
 
 @mark.django_db
-def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_objects(  # noqa
+def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_objects(
     episode, actors
 ):
     # arrange
@@ -188,9 +182,7 @@ def test_removing_from_many_to_many_relations_not_recorded_for_unaffected_object
 
 
 @mark.django_db
-def test_clearing_many_to_many_relations_recorded_on_both_sides(
-    episode, actors
-):
+def test_clearing_many_to_many_relations_recorded_on_both_sides(episode, actors):
     # arrange
     actor2, actor3 = actors
     episode.cast.add(actor2, actor3)
@@ -234,7 +226,7 @@ def test_excluded_many_to_many_field_not_recorded_in_history(episode):
 
 
 @mark.django_db
-def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregistered_object(  # noqa
+def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregistered_object(  # noqa: E501
     choice, groups
 ):
     # arrange
@@ -273,7 +265,7 @@ def test_history_generated_for_object_referenced_through_m2m_field_by_an_unregis
 
 
 @mark.django_db
-def test_history_generated_for_object_through_reverse_m2m_relation_with_untracked_added_objects(  # noqa
+def test_history_generated_for_object_through_reverse_m2m_relation_with_untracked_added_objects(  # noqa: E501
     choice, group
 ):
     # arrange
@@ -299,9 +291,7 @@ def test_history_generated_for_object_through_reverse_m2m_relation_with_untracke
     assert voters_cleared.data["voters"] == ""
     assert voter2_removed.history_type == "~"
     assert voter2_removed.history_diff == ["voters"]
-    assert voter2_removed.data["voters"] == history_format_fks(
-        [voter1.pk, voter3.pk]
-    )
+    assert voter2_removed.data["voters"] == history_format_fks([voter1.pk, voter3.pk])
     assert voter3_added.history_type == "~"
     assert voter3_added.history_diff == ["voters"]
     assert voter3_added.data["voters"] == history_format_fks(
@@ -309,9 +299,7 @@ def test_history_generated_for_object_through_reverse_m2m_relation_with_untracke
     )
     assert voters_set.history_type == "~"
     assert voters_set.history_diff == ["voters"]
-    assert voters_set.data["voters"] == history_format_fks(
-        [voter1.pk, voter2.pk]
-    )
+    assert voters_set.data["voters"] == history_format_fks([voter1.pk, voter2.pk])
     assert group_created.history_type == "+"
 
 
@@ -342,9 +330,7 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object(
     assert admins_cleared.data["admins"] == ""
     assert admin2_removed.history_type == "~"
     assert admin2_removed.history_diff == ["admins"]
-    assert admin2_removed.data["admins"] == history_format_fks(
-        [admin1.pk, admin3.pk]
-    )
+    assert admin2_removed.data["admins"] == history_format_fks([admin1.pk, admin3.pk])
     assert admin3_added.history_type == "~"
     assert admin3_added.history_diff == ["admins"]
     assert admin3_added.data["admins"] == history_format_fks(
@@ -352,14 +338,12 @@ def test_history_generated_for_object_with_m2m_field_to_untracked_object(
     )
     assert admins_set.history_type == "~"
     assert admins_set.history_diff == ["admins"]
-    assert admins_set.data["admins"] == history_format_fks(
-        [admin1.pk, admin2.pk]
-    )
+    assert admins_set.data["admins"] == history_format_fks([admin1.pk, admin2.pk])
     assert group_created.history_type == "+"
 
 
 @mark.django_db
-def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_untracked_object(  # noqa
+def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_untracked_object(  # noqa: E501
     groups,
 ):
     # arrange
@@ -398,7 +382,7 @@ def test_history_generated_for_objects_added_through_reverse_m2m_relation_on_an_
 
 
 @mark.django_db
-def test_additional_data_from_initially_changed_instance_copied_to_history_of_fk_field(  # noqa
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_fk_field(
     show,
 ):
     # act
@@ -418,7 +402,7 @@ def test_additional_data_from_initially_changed_instance_copied_to_history_of_fk
 
 
 @mark.django_db
-def test_additional_data_from_initially_changed_instance_copied_to_history_of_1_to_1_field(  # noqa
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_1_to_1_field(  # noqa: E501
     writer, show
 ):
     # act
@@ -441,7 +425,7 @@ def test_additional_data_from_initially_changed_instance_copied_to_history_of_1_
 
 
 @mark.django_db
-def test_additional_data_from_initially_changed_instance_copied_to_history_of_many_to_many_field(  # noqa
+def test_additional_data_from_initially_changed_instance_copied_to_history_of_many_to_many_field(  # noqa: E501
     episode2, group
 ):
     # arrange
@@ -467,7 +451,7 @@ def test_reordering_many_to_many_does_not_generate_record(episode, actors):
     episode.cast.add(actor3, actor2)
     cast_updated = episode.history.first()
     # re-order m2m
-    cast_updated.data["cast"] = "{}, {}".format(actor3.id, actor2.id)
+    cast_updated.data["cast"] = f"{actor3.id}, {actor2.id}"
     cast_updated.save()
     episode.save()
 

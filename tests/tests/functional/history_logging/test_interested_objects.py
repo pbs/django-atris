@@ -5,7 +5,7 @@ from tests.models import Episode, Link
 
 
 @mark.django_db
-def test_related_history_created_for_interested_objects_when_observed_object_added(  # noqa
+def test_related_history_created_for_interested_objects_when_observed_object_added(
     episode,
 ):
     # assert
@@ -22,7 +22,7 @@ def test_related_history_created_for_interested_objects_when_observed_object_add
 
 
 @mark.django_db
-def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for_all_its_items(  # noqa
+def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for_all_its_items(  # noqa: E501
     episode, actors
 ):
     # arrange
@@ -54,7 +54,7 @@ def test_m2m_field_added_to_interested_objects_list_triggers_related_history_for
 
 
 @mark.django_db
-def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_items(  # noqa
+def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_items(
     episode, actors
 ):
     # arrange
@@ -74,7 +74,7 @@ def test_setting_values_for_an_m2m_field_triggers_related_history_for_all_final_
 
 
 @mark.django_db
-def test_setting_values_for_an_m2m_field_triggers_related_history_for_previous_items(  # noqa
+def test_setting_values_for_an_m2m_field_triggers_related_history_for_previous_items(
     episode, actors
 ):
     # arrange
@@ -115,7 +115,7 @@ def test_related_history_created_for_interested_objects_when_m2m_field_updated(
 
 
 @mark.django_db
-def test_removing_values_from_an_m2m_field_triggers_related_history_for_all_items(  # noqa
+def test_removing_values_from_an_m2m_field_triggers_related_history_for_all_items(
     episode, actors
 ):
     # arrange
@@ -158,7 +158,7 @@ def test_clearing_items_from_m2m_field_triggers_related_history_for_all_items(
 
 
 @mark.django_db
-def test_updating_attributes_for_observed_object_triggers_related_history_for_all_interested_objects(  # noqa
+def test_updating_attributes_for_observed_object_triggers_related_history_for_all_interested_objects(  # noqa: E501
     show, writer, episode, actors
 ):
     # arrange
@@ -184,7 +184,7 @@ def test_updating_attributes_for_observed_object_triggers_related_history_for_al
 
 
 @mark.django_db
-def test_deleting_observed_object_triggers_related_history_for_all_interested_objects(  # noqa
+def test_deleting_observed_object_triggers_related_history_for_all_interested_objects(
     show, writer, episode, actor
 ):
     # arrange
@@ -209,7 +209,7 @@ def test_deleting_observed_object_triggers_related_history_for_all_interested_ob
 
 
 @mark.django_db
-def test_related_history_for_interested_generic_foreign_key_with_generic_relation(  # noqa
+def test_related_history_for_interested_generic_foreign_key_with_generic_relation(
     show,
 ):
     # act
@@ -233,7 +233,7 @@ def test_related_history_for_interested_generic_foreign_key_with_generic_relatio
 
 
 @mark.django_db
-def test_related_history_for_interested_generic_foreign_key_without_generic_relation(  # noqa
+def test_related_history_for_interested_generic_foreign_key_without_generic_relation(
     episode,
 ):
     # act
@@ -257,7 +257,7 @@ def test_related_history_for_interested_generic_foreign_key_without_generic_rela
 
 
 @mark.django_db
-def test_related_history_not_created_for_objects_not_added_in_interested_fields(  # noqa
+def test_related_history_not_created_for_objects_not_added_in_interested_fields(
     show, writer, season
 ):
     # act
@@ -275,7 +275,7 @@ def test_related_history_not_created_for_objects_not_added_in_interested_fields(
 
 
 @mark.django_db
-def test_history_generated_for_previous_interested_object_when_removed_from_observed_object(  # noqa
+def test_history_generated_for_previous_interested_object_when_removed_from_observed_object(  # noqa: E501
     show, episode
 ):
     # arrange
@@ -292,9 +292,7 @@ def test_history_generated_for_previous_interested_object_when_removed_from_obse
 
 
 @mark.django_db
-def test_observed_object_removal_will_override_regular_update_message(
-    show, episode
-):
+def test_observed_object_removal_will_override_regular_update_message(show, episode):
     # arrange
     next_show = ShowFactory.create()
     # act
@@ -310,7 +308,7 @@ def test_observed_object_removal_will_override_regular_update_message(
 
 
 @mark.django_db
-def test_history_generated_for_new_interested_object_when_set_on_existing_episode(  # noqa
+def test_history_generated_for_new_interested_object_when_set_on_existing_episode(
     show, episode
 ):
     # arrange
@@ -327,7 +325,7 @@ def test_history_generated_for_new_interested_object_when_set_on_existing_episod
 
 
 @mark.django_db
-def test_moving_observed_object_to_another_interested_object_will_override_regular_update_message(  # noqa
+def test_moving_observed_object_to_another_interested_object_will_override_regular_update_message(  # noqa: E501
     show, episode
 ):
     # arrange
@@ -345,7 +343,7 @@ def test_moving_observed_object_to_another_interested_object_will_override_regul
 
 
 @mark.django_db
-def test_history_generated_for_interested_m2m_object_when_observed_object_removed(  # noqa
+def test_history_generated_for_interested_m2m_object_when_observed_object_removed(
     show, episode, actors
 ):
     # arrange
@@ -367,7 +365,7 @@ def test_history_generated_for_interested_m2m_object_when_observed_object_remove
 
 
 @mark.django_db
-def test_history_generated_for_interested_m2m_object_when_observed_object_added(  # noqa
+def test_history_generated_for_interested_m2m_object_when_observed_object_added(
     show, episode, actors
 ):
     # arrange
@@ -411,7 +409,7 @@ def test_history_generated_for_interested_object_referenced_by_generic_field(
 
 
 @mark.django_db
-def test_modifications_to_interested_object_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
+def test_modifications_to_interested_object_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa: E501
     show, episode
 ):
     # act
@@ -442,7 +440,7 @@ def test_modifications_to_interested_object_saved_after_observed_object_is_saved
 
 @mark.django_db
 @mark.parametrize("entity", ["show", "episode"])
-def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa
+def test_modifications_to_interested_generic_fk_saved_after_observed_object_is_saved_appear_separately_from_observed_object_notification(  # noqa: E501
     entity, show, episode, writer
 ):
 

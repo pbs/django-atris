@@ -89,7 +89,4 @@ def test_historical_records_approx_count_does_not_raise():
     try:
         HistoricalRecord.objects.approx_count()
     except Exception:
-        fail(
-            "HistoricalRecord.objects.approx_count()"
-            "should not raise any error!"
-        )
+        fail("HistoricalRecord.objects.approx_count()" "should not raise any error!")

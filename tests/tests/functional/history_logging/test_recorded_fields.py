@@ -1,22 +1,10 @@
-from django.contrib.contenttypes.fields import (
-    GenericForeignKey,
-    GenericRelation,
-)
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from pytest import mark
 
 from atris.models.helpers import get_default_value
-from tests.models import (
-    Admin,
-    Choice,
-    Episode,
-    Group,
-    Link,
-    Poll,
-    Show,
-    Writer,
-)
+from tests.models import Admin, Choice, Episode, Group, Link, Poll, Show, Writer
 
 
 @mark.django_db
@@ -43,7 +31,7 @@ def test_excluded_fields_are_absent(poll, choice):
 
 
 @mark.django_db
-def test_history_not_generated_after_adding_new_model_field_without_changing_its_value(  # noqa
+def test_history_not_generated_after_adding_new_model_field_without_changing_its_value(
     poll,
 ):
     assert poll.history.count() == 1

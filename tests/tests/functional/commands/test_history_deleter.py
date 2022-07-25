@@ -47,9 +47,7 @@ class TestDeleteCommand:
             (15, {"weeks": 2}),
         ],
     )
-    def test_delete_archived_historical_record(
-        self, days, delete_command_kwargs
-    ):
+    def test_delete_archived_historical_record(self, days, delete_command_kwargs):
         # arrange
         out = StringIO()
         event = ArchivedHistoricalRecordFactory.create()

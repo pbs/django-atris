@@ -23,29 +23,28 @@ class Command(BaseCommand):
             dest="select_batch_size",
             type=int,
             default=self.SELECT_BATCH_SIZE,
-            help="The number of target objects that will be retrieved from "
-            "the DB at one time.",
+            help=(
+                "The number of target objects that "
+                "will be retrieved from the DB at one time."
+            ),
         )
         parser.add_argument(
             "--create-batch-size",
             dest="create_batch_size",
             type=int,
             default=self.CREATE_BATCH_SIZE,
-            help="The number of history objects that will be created "
-            "in one batch. Should be at most SELECT_BATCH_SIZE.",
+            help=(
+                "The number of history objects that will be created "
+                "in one batch. Should be at most SELECT_BATCH_SIZE."
+            ),
         )
 
     def handle(self, *args, **options):
         for model, model_specific_info in registered_models.items():
             if HistoricalRecord.objects.by_model(model).exists():
-                self.stderr.write(
-                    "{msg} {model}\n".format(
-                        msg=self.EXISTING_HISTORY_FOUND,
-                        model=model,
-                    ),
-                )
+                self.stderr.write(f"{self.EXISTING_HISTORY_FOUND} {model}\n")
                 continue
-            self.stdout.write("Initializing history for {}\n".format(model))
+            self.stdout.write(f"Initializing history for {model}\n")
             additional_data_param_name = model_specific_info[
                 "additional_data_param_name"
             ]
@@ -71,11 +70,11 @@ class Command(BaseCommand):
                     create_history_for_model()
             except DatabaseError as e:
                 self.stderr.write(
-                    "Error creating history for {}: {}".format(model, e),
+                    f"Error creating history for {model}: {e}",
                 )
 
 
-class ModelHistoryCreator(object):
+class ModelHistoryCreator:
     def __init__(
         self,
         model,
@@ -125,8 +124,7 @@ class ModelHistoryCreator(object):
     def create_history_for_object(self, obj):
         data = get_instance_field_data(obj)
         additional_data = {
-            key: str(value)
-            for key, value in self.additional_data_field.items()
+            key: str(value) for key, value in self.additional_data_field.items()
         }
         historical_record = HistoricalRecord(
             history_user=None,

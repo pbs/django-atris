@@ -27,7 +27,7 @@ def fake_save(obj, created=False):
     obj._meta.history_logging.post_save(obj, created=created)
 
 
-class HistoryManager(object):
+class HistoryManager:
     def __get__(self, instance, model):
         if instance and model:
             return HistoricalRecord.objects.by_model_and_model_id(
@@ -39,7 +39,7 @@ class HistoryManager(object):
 
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
-class HistoryLogging(object):
+class HistoryLogging:
 
     thread = threading.local()
     _cleared_related_objects = dict()
@@ -104,9 +104,7 @@ class HistoryLogging(object):
                     self.class_additional_data_name,
                 ),
             )
-            default_data_param_name = (
-                "default_" + self.additional_data_param_name
-            )
+            default_data_param_name = "default_" + self.additional_data_param_name
             setattr(
                 cls,
                 default_data_param_name,
@@ -224,10 +222,7 @@ class HistoryLogging(object):
                 )
                 related_objects = getattr(instance, field_name).all()
                 self._cleared_related_objects[instance] = list(related_objects)
-            elif (
-                action == "post_clear"
-                and instance in self._cleared_related_objects
-            ):
+            elif action == "post_clear" and instance in self._cleared_related_objects:
                 related_objects = self._cleared_related_objects.pop(instance)
                 for related_object in related_objects:
                     self._create_historical_record(
@@ -305,7 +300,7 @@ def find_m2m_field_name_by_model(in_model_meta, for_model, reverse_m2m):
             return field.name
 
 
-class M2MThroughClassesGatherer(object):
+class M2MThroughClassesGatherer:
     def __init__(self, cls):
         self.cls = cls
 
@@ -343,7 +338,7 @@ def is_str(obj):
     return isinstance(obj, str)
 
 
-class HistoricalRecordGenerator(object):
+class HistoricalRecordGenerator:
     def __init__(
         self,
         instance,
@@ -413,9 +408,7 @@ class HistoricalRecordGenerator(object):
     def should_skip_history_for_user(self):
         ids_to_skip = self.ignored_users.get("user_ids", [])
         user_names_to_skip = self.ignored_users.get("user_names", [])
-        return (
-            self.user_name in user_names_to_skip or self.user_id in ids_to_skip
-        )
+        return self.user_name in user_names_to_skip or self.user_id in ids_to_skip
 
     def get_differing_fields(self, data):
         if self.history_type == HistoricalRecord.UPDATE:
@@ -432,7 +425,7 @@ class HistoricalRecordGenerator(object):
         return diff_fields, should_generate_history
 
 
-class RelatedFieldHistoryGenerator(object):
+class RelatedFieldHistoryGenerator:
     def __init__(self, instance, instance_history, previous_data):
         self.instance = instance
         self.instance_history = instance_history
@@ -484,10 +477,8 @@ class RelatedFieldHistoryGenerator(object):
             generate_history()
 
 
-class InterestedObjectHistoryGenerator(object):
-    def __init__(
-        self, instance, instance_history, interested_fields, previous_data
-    ):
+class InterestedObjectHistoryGenerator:
+    def __init__(self, instance, instance_history, interested_fields, previous_data):
         self.instance = instance
         self.instance_history = instance_history
         self.interested_fields = interested_fields
@@ -501,8 +492,7 @@ class InterestedObjectHistoryGenerator(object):
         for field_name in self.interested_fields:
             field_value_changed = (
                 field_name in fields_to_check
-                or self.instance_history.history_type
-                == HistoricalRecord.DELETE
+                or self.instance_history.history_type == HistoricalRecord.DELETE
             )
             get_related_objects = HistoryEnabledRelatedObjectsCollector(
                 self.instance,
@@ -528,15 +518,9 @@ class InterestedObjectHistoryGenerator(object):
         additional_data.update(self.instance_history.additional_data)
         instance_class_name = self.instance.__class__.__name__
         instance_name = instance_class_name.lower()
-        if (
-            field_changed
-            and status is HistoryEnabledRelatedObjectsCollector.ADDED
-        ):
+        if field_changed and status is HistoryEnabledRelatedObjectsCollector.ADDED:
             action = "Added"
-        elif (
-            field_changed
-            and status is HistoryEnabledRelatedObjectsCollector.REMOVED
-        ):
+        elif field_changed and status is HistoryEnabledRelatedObjectsCollector.REMOVED:
             action = "Removed"
         else:
             action = self.instance_history.get_history_type_display() + "d"
@@ -555,7 +539,7 @@ class InterestedObjectHistoryGenerator(object):
         )
 
 
-class HistoryEnabledRelatedObjectsCollector(object):
+class HistoryEnabledRelatedObjectsCollector:
 
     ADDED = True
     REMOVED = False
@@ -602,9 +586,7 @@ class HistoryEnabledRelatedObjectsCollector(object):
         else:
             raise TypeError(
                 "Field {} did not match any known related field types. Known "
-                "types: 1-to-1, 1-to-many, many-to-1, many-to-many.".format(
-                    self.field
-                )
+                "types: 1-to-1, 1-to-many, many-to-1, many-to-many.".format(self.field)
             )
         return related_objects
 

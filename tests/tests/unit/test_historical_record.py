@@ -4,11 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from pytest import fixture, mark, raises
 
 from atris.models import HistoricalRecord, get_history_model
-from tests.factories import (
-    EpisodeFactory,
-    HistoricalRecordFactory,
-    WriterFactory,
-)
+from tests.factories import EpisodeFactory, HistoricalRecordFactory, WriterFactory
 from tests.models import Choice, Poll
 
 
@@ -67,9 +63,7 @@ class TestDiffString:
         # assert
         assert result == "Deleted poll"
 
-    def test_diff_string_for_update_with_one_field_updated(
-        self, poll_content_type
-    ):
+    def test_diff_string_for_update_with_one_field_updated(self, poll_content_type):
         # arrange
         update_history = HistoricalRecordFactory.create(
             content_type=poll_content_type,
@@ -81,9 +75,7 @@ class TestDiffString:
         # assert
         assert result == "Updated question"
 
-    def test_diff_string_for_update_with_more_fields_updated(
-        self, poll_content_type
-    ):
+    def test_diff_string_for_update_with_more_fields_updated(self, poll_content_type):
         # arrange
         update_history = HistoricalRecordFactory.create(
             content_type=poll_content_type,
@@ -96,9 +88,7 @@ class TestDiffString:
         expected_words = set(re.split(r"\W+", result))
         assert expected_words == {"Updated", "date", "published", "question"}
 
-    def test_diff_string_works_properly_with_lost_history(
-        self, poll_content_type
-    ):
+    def test_diff_string_works_properly_with_lost_history(self, poll_content_type):
         """
         Since old history deletion is a thing, the situation arises that
         history that once had a previous state no longer does and the snapshot
@@ -126,9 +116,7 @@ class TestDiffString:
         without_previous = update_without_previous.get_diff_to_prev_string()
         with_previous = update_with_previous.get_diff_to_prev_string()
         # assert
-        message = (
-            "Should not have the info required to build the " "history diff."
-        )
+        message = "Should not have the info required to build the history diff."
         assert without_previous == "No prior information available.", message
         assert with_previous == "Updated with no change", message
 

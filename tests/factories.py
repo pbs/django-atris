@@ -83,9 +83,7 @@ class AbstractFactory:
 
         create_kwargs.update(
             {
-                field_name: cls.DEFAULT_VALUES_FOR_INTERNAL_TYPE.get(
-                    field_type
-                )()
+                field_name: cls.DEFAULT_VALUES_FOR_INTERNAL_TYPE.get(field_type)()
                 for field_name, field_type in other_fields
                 if field_type not in cls.IGNORED_TYPES
             }

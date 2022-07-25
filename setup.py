@@ -9,7 +9,7 @@ setup(
     version="2.0.1",
     description="Django history logging.",
     long_description=(
-        "Django history logger that keeps track of changes on a global " "level."
+        "Django history logger that keeps track of changes on a global level."
     ),
     author="Bogdan Andrei Pop",
     author_email="bpop2232@gmail.com",

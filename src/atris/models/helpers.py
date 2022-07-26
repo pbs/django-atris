@@ -135,7 +135,7 @@ def get_attribute_name_from_field(field, flat_fk=True):
         # regular field or foreign key
         attname = getattr(field, accessor_for_simple_fields)
     else:
-        raise TypeError("Can't determine accessor for field {}".format(field))
+        raise TypeError(f"Can't determine accessor for field {field}")
     return attname
 
 

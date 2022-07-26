@@ -5,11 +5,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from atris.models import (
-    ArchivedHistoricalRecord,
-    HistoricalRecord,
-    history_logging,
-)
+from atris.models import ArchivedHistoricalRecord, HistoricalRecord, history_logging
 
 
 class ContentTypeListFilter(admin.SimpleListFilter):
@@ -65,9 +61,7 @@ class ApproxCountPgQuerySet(models.query.QuerySet):
                 and not query.distinct
             )
             if no_filtration_used:
-                parts = [
-                    p.strip('"') for p in self.model._meta.db_table.split(".")
-                ]
+                parts = [p.strip('"') for p in self.model._meta.db_table.split(".")]
                 if 1 <= len(parts) <= 2:
                     cursor = connections[self.db].cursor()
                     if len(parts) == 1:
@@ -123,7 +117,7 @@ class GenericHistoryAdmin(admin.ModelAdmin):
         # Capturing the request object in order to build the absolute URI in
         # `related_field_history_admin`
         self._request = request
-        qs = super(GenericHistoryAdmin, self).get_queryset(request)
+        qs = super().get_queryset(request)
         return qs
 
     def history_snapshot(self, obj):

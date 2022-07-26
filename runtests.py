@@ -1,51 +1,51 @@
-#!/usr/bin/env python
 import sys
-from shutil import rmtree
-from os.path import abspath, dirname, join
 
-from django.conf import settings
+from os.path import abspath, dirname, join
+from shutil import rmtree
 
 import pytest
+
+from django.conf import settings
 
 
 sys.path.insert(0, abspath(dirname(__file__)))
 
 
-media_root = join(abspath(dirname(__file__)), 'test_files')
+media_root = join(abspath(dirname(__file__)), "test_files")
 rmtree(media_root, ignore_errors=True)
 
 installed_apps = [
-    'django.contrib.contenttypes',
-    'django.contrib.auth',
-    'django.contrib.sessions',
-    'django.contrib.admin',
-    'django.contrib.postgres',
-    'atris',
-    'tests',
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
+    "django.contrib.sessions",
+    "django.contrib.admin",
+    "django.contrib.postgres",
+    "atris",
+    "tests",
 ]
 
 DEFAULT_SETTINGS = dict(
     MEDIA_ROOT=media_root,
-    STATIC_URL='/static/',
+    STATIC_URL="/static/",
     INSTALLED_APPS=installed_apps,
     DATABASES={
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'history_db',
-            'USER': 'history_user2',
-            'PASSWORD': 'pass',
-            'HOST': 'localhost',
-            'TEST': {
-                'NAME': 'test_history_db',
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
+            "NAME": "history_db",
+            "USER": "history_user2",
+            "PASSWORD": "pass",
+            "HOST": "localhost",
+            "TEST": {
+                "NAME": "test_history_db",
             },
         },
     },
     MIDDLEWARE_CLASSES=[
-        'django.contrib.sessions.middleware.SessionMiddleware',
-        'django.middleware.common.CommonMiddleware',
-        'django.contrib.auth.middleware.AuthenticationMiddleware',
-        'django.contrib.messages.middleware.MessageMiddleware',
-        'atris.middleware.LoggingRequestMiddleware',
+        "django.contrib.sessions.middleware.SessionMiddleware",
+        "django.middleware.common.CommonMiddleware",
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "django.contrib.messages.middleware.MessageMiddleware",
+        "atris.middleware.LoggingRequestMiddleware",
     ],
 )
 

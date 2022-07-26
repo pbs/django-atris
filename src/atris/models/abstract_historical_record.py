@@ -216,7 +216,7 @@ class AbstractHistoricalRecord(models.Model):
         :return: Said string.
         :rtype String
         """
-        diff_string = "{}d ".format(self.get_history_type_display())
+        diff_string = f"{self.get_history_type_display()}d "
         if self.history_type == self.UPDATE:
             if not self.history_diff:
                 if not self.previous_version:

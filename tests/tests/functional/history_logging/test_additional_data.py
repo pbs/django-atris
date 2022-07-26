@@ -10,9 +10,7 @@ class TestAdditionalData:
         poll_created = poll.history.first()
         assert poll_created.additional_data == {"where_from": "Import"}
 
-    def test_default_additional_data_not_set_if_not_defined_on_model(
-        self, choice
-    ):
+    def test_default_additional_data_not_set_if_not_defined_on_model(self, choice):
         # assert
         choice_created = choice.history.first()
         assert choice_created.additional_data == dict()
@@ -29,9 +27,7 @@ class TestAdditionalData:
         expected = {"where_from": "API", "something_particular": "Something"}
         assert poll_updated.additional_data == expected
 
-    def test_additional_data_without_default_can_be_set_on_the_instance(
-        self, choice
-    ):
+    def test_additional_data_without_default_can_be_set_on_the_instance(self, choice):
         # arrange
         choice.votes = 1
         choice.additional_data["where_from"] = "System"
@@ -42,9 +38,7 @@ class TestAdditionalData:
         updated_votes = choice.history.first()
         assert updated_votes.additional_data == {"where_from": "System"}
 
-    def test_explicitly_set_additional_data_on_instance_without_default(
-        self, choice
-    ):
+    def test_explicitly_set_additional_data_on_instance_without_default(self, choice):
         # arrange
         choice.additional_data = {"where_from": "System"}
         choice.votes = 1
@@ -54,7 +48,7 @@ class TestAdditionalData:
         assert choice.history.count() == 2
         assert choice.history.first().additional_data["where_from"] == "System"
 
-    def test_history_with_additional_data_not_recorded_if_nothing_changed_on_instance(  # noqa
+    def test_history_with_additional_data_not_recorded_if_nothing_changed_on_instance(
         self, poll
     ):
         # arrange

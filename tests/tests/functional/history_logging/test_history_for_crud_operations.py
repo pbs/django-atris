@@ -25,7 +25,7 @@ def test_history_create_for_tracked_models(poll, choice, voter):
 
 
 @mark.django_db
-def test_extra_operation_required_to_log_changes_to_many_to_one_relations_to_untracked_models(  # noqa
+def test_extra_operation_required_to_log_changes_to_many_to_one_relations_to_untracked_models(  # noqa: E501
     poll, choice, voter
 ):
     # arrange
@@ -90,7 +90,7 @@ def test_history_delete_for_tracked_models(poll):
 
 
 @mark.django_db
-def test_deleting_untracked_instances_requires_fake_save_for_referring_tracked_instance(  # noqa
+def test_deleting_untracked_instances_requires_fake_save_for_referring_tracked_instance(
     choice, voter
 ):
     # arrange
@@ -107,9 +107,7 @@ def test_deleting_untracked_instances_requires_fake_save_for_referring_tracked_i
 
 
 @mark.django_db
-def test_deleting_referenced_tracked_object_tracks_both_delete_operations(
-    poll, choice
-):
+def test_deleting_referenced_tracked_object_tracks_both_delete_operations(poll, choice):
     # arrange
     poll_id = poll.pk
     choice_id = choice.pk

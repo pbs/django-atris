@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:13-alpine
+    user: postgres
+    environment:
+      - POSTGRES_DB=history_db
+      - POSTGRES_USER=history_user2
+      - POSTGRES_PASSWORD=pass
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  test_py37:
+    image: python:3.7-slim-bullseye
+    command: sh -c "
+      cd django-atris;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install .;
+      python runtests.py -vv --cov=src --cov-report=term-missing:skip-covered | tee test-results_py37;
+      "
+    volumes:
+      - .:/django-atris
+    depends_on:
+      - db
+
+  test_py38:
+    image: python:3.8-slim-bullseye
+    command: sh -c "
+      cd django-atris;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install .;
+      python runtests.py -vv --cov=src --cov-report=term-missing:skip-covered | tee test-results_py38;
+      "
+    volumes:
+      - .:/django-atris
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+    driver: local

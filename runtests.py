@@ -25,6 +25,7 @@ installed_apps = [
 ]
 
 DEFAULT_SETTINGS = dict(
+    SECRET_KEY='test_m90nvn4y^n4tya6u1slk24u*)+7@qg-t8qg9^-v7=36!62*gki',
     MEDIA_ROOT=media_root,
     STATIC_URL="/static/",
     INSTALLED_APPS=installed_apps,
@@ -34,7 +35,7 @@ DEFAULT_SETTINGS = dict(
             "NAME": "history_db",
             "USER": "history_user2",
             "PASSWORD": "pass",
-            "HOST": "localhost",
+            "HOST": "db",
             "TEST": {
                 "NAME": "test_history_db",
             },

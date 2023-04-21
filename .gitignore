@@ -61,3 +61,7 @@ target/
 
 # PyEnv
 .python-version
+
+# Other
+.local
+test-results

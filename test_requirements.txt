@@ -1,0 +1,8 @@
+django==2.2; python_version < '3.7'
+django==2.2.28; python_version >= '3.7' and python_version < '3.8'
+django==4.2; python_version >= '3.8'
+psycopg2-binary
+pytest==7.0.1
+pytest-cov==3.0.0
+pytest-django==4.5.2
+pytest-mock==3.6.1

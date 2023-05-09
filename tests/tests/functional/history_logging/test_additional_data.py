@@ -14,6 +14,7 @@ class TestAdditionalData:
         # assert
         choice_created = choice.history.first()
         assert choice_created.additional_data == dict()
+        assert True is False
 
     def test_additional_data_set_to_value_from_instance(self, poll):
         # arrange

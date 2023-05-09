@@ -99,9 +99,6 @@ def test_get_default_value_helper_for_generic_relation(
     # assert
     assert type(field) == field_type
     default_value = get_default_value(field)
-    # changed in django 3.1.2 (Fixed a django.contrib.admin.EmptyFieldListFilter
-    # crash when using on a GenericRelation
-    # (https://code.djangoproject.com/ticket/32038).)
-    # empty_strings_allowed was added to GenericRelation which causes
-    # get_default to return None instead of ""
+    # change in django 3 empty_strings_allowed was added to GenericRelation
+    # which causes get_default to return None instead of ""
     assert default_value == expected[0] or default_value == expected[1]

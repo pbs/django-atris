@@ -2,25 +2,19 @@ name: TEST and push to test.pypi.org
 
 on: workflow_dispatch
 
-concurrency: master-${{ github.ref }}
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-#    env:
-#      TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
-#      TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}
-#      TWINE_REPOSITORY_URL: ${{ secrets.TEST_TWINE_REPOSITORY_URL }}
+    env:
+      TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
+      TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}
+
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@master
 
       - name: Run tests
         run: |
-          docker-compose down
-          docker-compose run --rm test_py36
           docker-compose down
           docker-compose run --rm test_py37
           docker-compose down
@@ -28,9 +22,18 @@ jobs:
           docker-compose down
 
       - name: Publish test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@master
         with:
           name: test-results
           path:
             test-results_*
         if: ${{ always() }}
+
+      - name: Upload package to testpipy
+        run: |
+          rm -rf dist src/django_atris.egg-info/ .coverage
+          pip install --upgrade pip
+          pip install --upgrade twine
+          pip install --upgrade build
+          python3 -m build
+          python3 -m twine upload --repository testpypi dist/*

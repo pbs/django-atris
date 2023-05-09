@@ -16,6 +16,7 @@ This app requires:
 - Python:
     - for django-atris < 2.0.0  please use Python >= 2.7 or Python >= 3.4 (after Django 2)
     - for django-atris >= 2.0.0 please use Python >= 3.6
+    - for django-atris >= 2.0.1 please use Python >= 3.7
 
 Integration guide
 -----------------
@@ -229,5 +230,5 @@ Changelog
         - This issue was causing historical records to be generated when saving (without any changes) existing instances of tracked models
 
 2.0.1:
-    * Dropping support for Python <= 3.6
+    * Dropped support for Python <= 3.6
     * Move away from setup.py to pyproject.toml

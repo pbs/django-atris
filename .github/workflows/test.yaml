@@ -31,7 +31,7 @@ jobs:
 
       - name: Upload package to testpipy
         run: |
-          rm -rf dist src/django_atris.egg-info/ .coverage
+          sudo rm -rf dist src/django_atris.egg-info/ .coverage
           pip install --upgrade pip
           pip install --upgrade twine
           pip install --upgrade build

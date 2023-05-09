@@ -64,4 +64,6 @@ target/
 
 # Other
 .local
-test-results
+test-results*
+assets
+.pytest_cache

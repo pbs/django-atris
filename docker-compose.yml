@@ -21,7 +21,7 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      python runtests.py -vv --cov=src --cov-report=term-missing:skip-covered | tee test-results_py37;
+      python runtests.py -vv --html=./test-results_py37.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
       "
     volumes:
       - .:/django-atris
@@ -35,7 +35,7 @@ services:
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
-      python runtests.py -vv --cov=src --cov-report=term-missing:skip-covered | tee test-results_py38;
+      python runtests.py -vv --html=./test-results_py38.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
       "
     volumes:
       - .:/django-atris

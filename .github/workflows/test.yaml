@@ -9,6 +9,6 @@ jobs:
   publish:
     uses: ./.github/workflows/publish.yaml
     needs: run-tests
-    secrets:
+    with:
       TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
       TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}

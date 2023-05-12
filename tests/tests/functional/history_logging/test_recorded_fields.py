@@ -68,6 +68,7 @@ def test_history_not_generated_after_adding_new_model_field_without_changing_its
         (Choice, "votes", models.IntegerField, None),
         (Admin, "groups", models.ManyToManyRel, ""),
         (Group, "admins", models.ManyToManyField, ""),
+        (Show, "links", GenericRelation, ""),
         (Episode, "author", models.OneToOneField, None),
         (Writer, "work", models.OneToOneRel, None),
         (Link, "object_id", models.PositiveIntegerField, None),
@@ -83,22 +84,3 @@ def test_get_default_value_helper(model, field_name, field_type, expected):
     # assert
     assert type(field) == field_type
     assert get_default_value(field) == expected
-
-
-@mark.parametrize(
-    "model, field_name, field_type, expected",
-    [
-        (Show, "links", GenericRelation, ("", None)),
-    ],
-)
-def test_get_default_value_helper_for_generic_relation(
-    model, field_name, field_type, expected
-):
-    # act
-    field = model._meta.get_field(field_name)
-    # assert
-    assert type(field) == field_type
-    default_value = get_default_value(field)
-    # change in django 3 empty_strings_allowed was added to GenericRelation
-    # which causes get_default to return None instead of ""
-    assert default_value == expected[0] or default_value == expected[1]

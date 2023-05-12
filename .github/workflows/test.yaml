@@ -29,7 +29,7 @@ jobs:
             test-results_*
         if: ${{ always() }}
 
-      - name: Upload package to testpipy
+      - name: Upload package to testpypi
         run: |
           sudo rm -rf dist src/django_atris.egg-info/ .coverage
           pip install --upgrade pip

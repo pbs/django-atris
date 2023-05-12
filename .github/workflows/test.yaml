@@ -1,4 +1,4 @@
-name: Test and publish django-atris to testpypi
+name: [Test PyPI] Test and publish django-atris
 
 on:
   workflow_dispatch

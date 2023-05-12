@@ -1,0 +1,26 @@
+name: Run Tests
+
+on: workflow_dispatch
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Run tests
+        run: |
+          docker-compose down
+          docker-compose run --rm test_py37
+          docker-compose down
+          docker-compose run --rm test_py38
+          docker-compose down
+
+      - name: Publish test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path:
+            test-results_*
+        if: ${{ always() }}

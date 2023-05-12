@@ -6,7 +6,7 @@ on:
 jobs:
   run-tests:
     uses: ./.github/workflows/tests.yaml
-  call-publish:
+  publish:
     uses: ./.github/workflows/publish.yaml
     needs: run-tests
     secrets:

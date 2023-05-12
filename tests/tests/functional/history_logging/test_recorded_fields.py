@@ -84,4 +84,3 @@ def test_get_default_value_helper(model, field_name, field_type, expected):
     # assert
     assert type(field) == field_type
     assert get_default_value(field) == expected
-    assert False

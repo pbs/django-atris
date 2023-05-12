@@ -6,9 +6,9 @@ jobs:
   run-tests:
     uses: ./.github/workflows/tests.yaml
   call-publish:
+    uses: ./.github/workflows/publish.yaml
     needs: run-tests
     with:
       TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
       TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}
       TWINE_REPOSITORY: testpypi
-    uses: ./.github/workflows/publish.yaml

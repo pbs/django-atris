@@ -5,10 +5,8 @@ on:
     secrets:
       TWINE_USERNAME:
         required: true
-        type: string
       TWINE_PASSWORD:
         required: true
-        type: string
     inputs:
       TWINE_REPOSITORY:
         required: false

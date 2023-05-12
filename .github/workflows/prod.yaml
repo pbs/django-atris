@@ -12,3 +12,4 @@ jobs:
     secrets:
       TWINE_USERNAME: ${{ secrets.PROD_TWINE_USERNAME }}
       TWINE_PASSWORD: ${{ secrets.PROD_TWINE_PASSWORD }}
+      TWINE_REPOSITORY: 'pypi'

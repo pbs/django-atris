@@ -12,4 +12,3 @@ jobs:
     secrets:
       TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
       TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}
-      TWINE_REPOSITORY: testpypi

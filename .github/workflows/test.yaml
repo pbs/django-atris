@@ -1,6 +1,7 @@
 name: Test and publish django-atris to testpypi
 
-on: workflow_dispatch
+on:
+  workflow_dispatch
 
 jobs:
   run-tests:

@@ -1,4 +1,4 @@
-name: [Official PyPI] Test and publish django-atris
+name: Official PyPI - Test and publish django-atris
 
 on:
   workflow_dispatch

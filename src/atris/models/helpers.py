@@ -4,7 +4,7 @@ import re
 
 from typing import Dict, List, Optional, Type, Union
 
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
 from django.db.models import Model
@@ -53,6 +53,10 @@ def get_diff_fields(
 def get_default_value(field):
     try:
         default_value = field.get_default()
+        # this is an ugly fix needed for django 3.2 compatibility - I don't like it
+        # either but have no better solution
+        if isinstance(field, GenericRelation) and default_value is None:
+            return ''
         return str(default_value) if default_value is not None else None
     except AttributeError as e:
         error_message = str(e)

@@ -1,4 +1,4 @@
-django==3.2.19
+django==3.2.20
 psycopg2-binary
 pytest==7.0.1
 pytest-cov==3.0.0

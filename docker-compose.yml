@@ -14,28 +14,32 @@ services:
     ports:
       - "5432:5432"
 
-  test_py37:
-    image: python:3.7-slim-bullseye
-    command: sh -c "
-      cd django-atris;
-      pip install --upgrade pip;
-      pip install -r test_requirements.txt;
-      pip install -e .;
-      python runtests.py -vv --html=./test-results_py37.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
-      "
-    volumes:
-      - .:/django-atris
-    depends_on:
-      - db
-
   test_py38:
     image: python:3.8-slim-bullseye
+    environment:
+      - PYTHONWARNINGS=always
     command: sh -c "
       cd django-atris;
       pip install --upgrade pip;
       pip install -r test_requirements.txt;
       pip install -e .;
       python runtests.py -vv --html=./test-results_py38.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
+      "
+    volumes:
+      - .:/django-atris
+    depends_on:
+      - db
+
+  test_py310:
+    image: python:3.10-slim-bookworm
+    environment:
+      - PYTHONWARNINGS=always
+    command: sh -c "
+      cd django-atris;
+      pip install --upgrade pip;
+      pip install -r test_requirements.txt;
+      pip install -e .;
+      python runtests.py -vv --html=./test-results_py310.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
       "
     volumes:
       - .:/django-atris

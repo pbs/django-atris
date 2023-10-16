@@ -1,10 +1,10 @@
 import random
 import uuid
 
-from datetime import datetime
 from string import ascii_letters
 
 from django.contrib.contenttypes.models import ContentType
+from django.utils.timezone import now
 
 from atris.models import ArchivedHistoricalRecord, HistoricalRecord
 from atris.models.helpers import get_field_internal_type
@@ -45,7 +45,7 @@ class AbstractFactory:
 
     DEFAULT_VALUES_FOR_INTERNAL_TYPE = {
         "AutoField": lambda: random_integer(),
-        "DateTimeField": lambda: datetime.now(),
+        "DateTimeField": lambda: now(),
         "CharField": lambda: random_string(),
         "IntegerField": lambda: random_integer(),
         "UUIDField": lambda: uuid.uuid4(),

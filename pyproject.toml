@@ -17,7 +17,7 @@ classifiers = [
 dependencies = [
     "Django>=2.2,<=4.2.6",
 ]
-version = "2.0.19999"
+version = "2.0.199991"
 
 [tool.setuptools]
 zip-safe = false

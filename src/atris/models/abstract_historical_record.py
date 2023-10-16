@@ -4,10 +4,10 @@ from datetime import timedelta
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
 from django.db import connection, models
-from django.db.models import Q
+from django.db.models import JSONField, Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
 
@@ -140,7 +140,6 @@ class HistoricalRecordQuerySet(QuerySet):
 
 
 class AbstractHistoricalRecord(models.Model):
-
     CREATE = "+"
     UPDATE = "~"
     DELETE = "-"

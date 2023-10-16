@@ -5,8 +5,9 @@ from django.contrib.contenttypes.fields import (
     GenericForeignKey,
     GenericRelation,
 )
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.db.models import JSONField
 from django.utils.translation import gettext_lazy as _
 
 from atris.models import HistoryLogging
@@ -148,9 +149,9 @@ class Episode(models.Model):
     keywords = ArrayField(
         base_field=models.CharField(max_length=20, blank=True),
         null=False,
-        default=lambda: [],
+        default=list,
     )
-    episode_metadata = JSONField(null=False, default=lambda: {})
+    episode_metadata = JSONField(null=False, default=dict)
 
     additional_data = {"where_from": "System"}
     interested_related_fields = ["show", "cast", "author"]
@@ -163,7 +164,6 @@ class Episode(models.Model):
 
 
 class Episode2(Episode):
-
     groups = models.ManyToManyField(Group, related_name="episodes")
 
     additional_data = {"where_from": "System"}

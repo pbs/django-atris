@@ -237,5 +237,5 @@ Changelog
     * Move away from setup.py to pyproject.toml
 
 2.0.2:
-    * Added support for Django 4.0
+    * Added support for Django 4 (up to 4.2.6)
     * Dropped support for python < 3.8

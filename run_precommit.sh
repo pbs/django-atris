@@ -1,2 +1,2 @@
-pip install pre-commit==2.17.0
+pip install pre-commit==3.4.0
 pre-commit run --all-files

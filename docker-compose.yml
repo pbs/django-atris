@@ -6,42 +6,36 @@ services:
     user: postgres
     environment:
       - POSTGRES_DB=history_db
-      - POSTGRES_USER=history_user2
+      - POSTGRES_USER=history_user
       - POSTGRES_PASSWORD=pass
       - PGDATA=/var/lib/postgresql/data
-    volumes:
-      - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
-  test_py37:
-    image: python:3.7-slim-bullseye
-    command: sh -c "
-      cd django-atris;
-      pip install --upgrade pip;
-      pip install -r test_requirements.txt;
-      pip install -e .;
-      python runtests.py -vv --html=./test-results_py37.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
-      "
-    volumes:
-      - .:/django-atris
-    depends_on:
-      - db
-
   test_py38:
     image: python:3.8-slim-bullseye
+    environment:
+      - PYTHONWARNINGS=always
     command: sh -c "
       cd django-atris;
-      pip install --upgrade pip;
-      pip install -r test_requirements.txt;
-      pip install -e .;
-      python runtests.py -vv --html=./test-results_py38.html --self-contained-html --cov=src --cov-report=term-missing:skip-covered;
+      bash ./run_tests.sh;
+      mv ./test-results.html ./test-results_py38.html;
       "
     volumes:
       - .:/django-atris
     depends_on:
       - db
 
-volumes:
-  pgdata:
-    driver: local
+  test_py310:
+    image: python:3.10-slim-bookworm
+    environment:
+      - PYTHONWARNINGS=always
+    command: sh -c "
+      cd django-atris;
+      bash ./run_tests.sh;
+      mv ./test-results.html ./test-results_py310.html;
+      "
+    volumes:
+      - .:/django-atris
+    depends_on:
+      - db

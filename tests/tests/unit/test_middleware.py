@@ -14,6 +14,6 @@ def mock_request(mocker):
 
 def test_logging_request_middleware(mock_request):
     assert not hasattr(HistoryLogging.thread, "request")
-    middleware = LoggingRequestMiddleware()
+    middleware = LoggingRequestMiddleware(lambda get_response: None)
     middleware.process_request(mock_request)
     assert HistoryLogging.thread.request == mock_request

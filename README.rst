@@ -7,16 +7,18 @@ Snapshots are available in a global form as well.
 
 This app requires:
 
-- Django >= 1.10:
-    - for Django < 1.9      please use django-atris < 1.0.0
-    - for Django < 1.10     please use django-atris < 1.2.0
-    - for Django > 2.0.0    please use django-atris > 1.2.1
-    - for Django > 3.2      please use django-atris = 2.0.1
+- Django:
+    - for Django < 1.9                  please use django-atris < 1.0.0
+    - for Django < 1.10                 please use django-atris < 1.2.0
+    - for Django > 2.0.0                please use django-atris > 1.2.1
+    - for Django >= 3.2 < 4.0           please use django-atris = 2.0.1
+    - for Django >= 3.2.19 <= 4.2.6     please use django-atris = 2.0.2
 - Postgresql
 - Python:
-    - for django-atris < 2.0.0  please use Python >= 2.7 or Python >= 3.4 (after Django 2)
-    - for django-atris >= 2.0.0 please use Python >= 3.6
-    - for django-atris >= 2.0.1 please use Python >= 3.7
+    - for django-atris < 2.0.0          please use Python >= 2.7 or Python >= 3.4 (after Django 2)
+    - for django-atris >= 2.0.0         please use Python >= 3.6
+    - for django-atris == 2.0.1         please use Python >= 3.7
+    - for django-atris >= 2.0.2         please use Python >= 3.8
 
 Integration guide
 -----------------
@@ -230,5 +232,11 @@ Changelog
         - This issue was causing historical records to be generated when saving (without any changes) existing instances of tracked models
 
 2.0.1:
-    * Dropped support for Python <= 3.6
+    * Dropped support for Python < 3.7
+    * Added support for Django 3.2
     * Move away from setup.py to pyproject.toml
+
+2.0.2:
+    * Dropped support for Django 2
+    * Added support for Django 4 (tested up to 4.2.6)
+    * Dropped support for python < 3.8

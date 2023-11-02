@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "Django>=3.2.19,<=4.2.6",
+    "Django>=3.2.19,<=4.2.7",
 ]
 version = "2.0.2"
 

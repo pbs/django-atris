@@ -245,3 +245,6 @@ Changelog
 2.0.3:
     * Dropped support for Django 3
     * Extended support beyond 4.2.6 up to less than Django 5 (tested up to 4.2.7)
+
+2.0.4:
+    * fixed bug inside RelatedFieldHistoryGenerator - although a field was added to the history_logging.excluded_fields_names it was still checked for diffs

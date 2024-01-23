@@ -439,7 +439,6 @@ class RelatedFieldHistoryGenerator:
             fields_to_check = self.instance_history.history_diff or []
         else:
             fields_to_check = list(self.instance_history.data.keys())
-        fields_to_check += self.history_logging.excluded_fields_names
         for field_name in fields_to_check:
             try:
                 self._generate_for_field(field_name)

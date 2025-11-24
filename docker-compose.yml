@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   db:
-    image: postgres:13-alpine
+    image: postgres:14-alpine
     user: postgres
     environment:
       - POSTGRES_DB=history_db
@@ -12,22 +12,36 @@ services:
     ports:
       - "5432:5432"
 
-  test_py38:
-    image: python:3.8-slim-bullseye
+  test_py310:
+    image: python:3.10-slim-bookworm
     environment:
       - PYTHONWARNINGS=always
     command: sh -c "
       cd django-atris;
       bash ./run_tests.sh;
-      mv ./test-results.html ./test-results_py38.html;
+      mv ./test-results.html ./test-results_py310.html;
       "
     volumes:
       - .:/django-atris
     depends_on:
       - db
 
-  test_py310:
-    image: python:3.10-slim-bookworm
+  test_py311:
+    image: python:3.11-slim-trixie
+    environment:
+      - PYTHONWARNINGS=always
+    command: sh -c "
+      cd django-atris;
+      bash ./run_tests.sh;
+      mv ./test-results.html ./test-results_py310.html;
+      "
+    volumes:
+      - .:/django-atris
+    depends_on:
+      - db
+
+  test_py312:
+    image: python:3.12-slim-trixie
     environment:
       - PYTHONWARNINGS=always
     command: sh -c "

@@ -4,7 +4,7 @@ import re
 
 from typing import Dict, List, Optional, Type, Union
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
 from django.db.models import Model
@@ -67,13 +67,7 @@ def get_default_value(field):
 
 
 def get_field_internal_type(field):
-    try:
-        return field.get_internal_type().strip()
-    except AttributeError as e:
-        if type(field) == GenericForeignKey:
-            return "GenericForeignKey"
-        else:
-            raise e
+    return field.get_internal_type().strip()
 
 
 def is_different(old, new, field):

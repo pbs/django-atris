@@ -13,14 +13,16 @@ jobs:
 
       - name: Run tests
         run: |
-          docker-compose down
-          docker-compose run --rm test_py38
-          docker-compose down
-          docker-compose run --rm test_py310
-          docker-compose down
+          docker compose down
+          docker compose run --rm test_py310
+          docker compose down
+          docker compose run --rm test_py311
+          docker compose down
+          docker compose run --rm test_py312
+          docker compose down
 
       - name: Publish test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path:

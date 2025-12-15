@@ -7,7 +7,7 @@ name = "django-atris"
 authors = [{ name = "Bogdan Andrei Pop", email = "bpop2232@gmail.com" }]
 description = "Django history logger that keeps track of changes on a global level."
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 keywords = ["django", "database", "history", "logging"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -15,9 +15,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "Django>=4,<5",
+    "Django>=5,<6",
 ]
-version = "2.0.3"
+version = "2.0.4"
 
 [tool.setuptools]
 zip-safe = false

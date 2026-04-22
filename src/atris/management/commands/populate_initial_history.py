@@ -7,7 +7,6 @@ from django.db.transaction import atomic
 from atris.models import get_history_model, registered_models
 from atris.models.helpers import get_instance_field_data
 
-
 HistoricalRecord = get_history_model()
 
 

@@ -11,7 +11,6 @@ from django.db.models import JSONField, Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
 
-
 logger = logging.getLogger(__name__)
 
 

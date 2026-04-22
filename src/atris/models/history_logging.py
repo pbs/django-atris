@@ -11,7 +11,6 @@ from .exceptions import InvalidRelatedField
 from .helpers import from_writable_db, get_diff_fields, get_instance_field_data
 from .historical_record import get_history_model
 
-
 registered_models = {}
 logger = logging.getLogger(__name__)
 HistoricalRecord = get_history_model()

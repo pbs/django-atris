@@ -31,7 +31,7 @@ services:
     command: sh -c "
       cd django-atris;
       bash ./run_tests.sh;
-      mv ./test-results.html ./test-results_py310.html;
+      mv ./test-results.html ./test-results_py311.html;
       "
     volumes:
       - .:/django-atris
@@ -45,7 +45,7 @@ services:
     command: sh -c "
       cd django-atris;
       bash ./run_tests.sh;
-      mv ./test-results.html ./test-results_py310.html;
+      mv ./test-results.html ./test-results_py312.html;
       "
     volumes:
       - .:/django-atris

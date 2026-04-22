@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-atris"
-authors = [{ name = "Bogdan Andrei Pop", email = "bpop2232@gmail.com" }]
+authors = [{ name = "PBS" }]
 description = "Django history logger that keeps track of changes on a global level."
 readme = "README.rst"
 requires-python = ">=3.10"

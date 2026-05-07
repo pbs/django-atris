@@ -27,6 +27,7 @@ jobs:
       - name: Upload package
         run: |
           pip install --upgrade pip
+          pip install --upgrade packaging
           pip install --upgrade twine
           pip install --upgrade build
           env | grep TWINE_REPOSITORY

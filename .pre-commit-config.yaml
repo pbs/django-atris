@@ -1,8 +1,8 @@
-default_stages: [commit, push]
+default_stages: [pre-commit, pre-push]
 exclude: ^.*/migrations/
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
     -   id: check-toml
     -   id: check-xml
@@ -15,15 +15,15 @@ repos:
     -   id: check-ast
 
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
+    rev: v3.21.2
     hooks:
     -   id: pyupgrade
         args: [
             "--py36-plus",
         ]
 
--   repo: https://github.com/myint/autoflake
-    rev: v1.4
+-   repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.3
     hooks:
     -   id: autoflake
         args: [
@@ -34,18 +34,18 @@ repos:
         ]
 
 -   repo: https://github.com/PyCQA/isort
-    rev: 5.11.5
+    rev: 8.0.1
     hooks:
     -   id: isort
         args: [
             "--profile", "black",
             "--lines-between-types=1",
             "--lines-before-imports=0",
-            "--lines-after-imports=2",
+            "--lines-after-imports=-1",  # -1 = auto; defers to black (2 before class/def, 1 before assignments)
         ]
 
 -   repo: https://github.com/psf/black
-    rev: 22.6.0
+    rev: 26.3.1
     hooks:
     -   id: black
         args: [
@@ -53,12 +53,12 @@ repos:
         ]
 
 -    repo: https://github.com/PyCQA/flake8
-     rev: 4.0.1
+     rev: 7.3.0
      hooks:
      -   id: flake8
 
 -    repo: https://github.com/PyCQA/bandit
-     rev: 1.7.1
+     rev: 1.9.4
      hooks:
      -   id: bandit
          exclude: ^tests/

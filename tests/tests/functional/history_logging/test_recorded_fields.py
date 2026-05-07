@@ -73,7 +73,7 @@ def test_history_not_generated_after_adding_new_model_field_without_changing_its
         (Episode, "author", models.OneToOneField, None),
         (Writer, "work", models.OneToOneRel, None),
         (Link, "object_id", models.PositiveIntegerField, None),
-        (Link, "related_object", GenericForeignKey, None),
+        (Link, "related_object", GenericForeignKey, ""),
         (Episode, "is_published", models.BooleanField, "True"),
         (Episode, "keywords", ArrayField, "[]"),
         (Episode, "episode_metadata", JSONField, "{}"),
@@ -83,5 +83,5 @@ def test_get_default_value_helper(model, field_name, field_type, expected):
     # act
     field = model._meta.get_field(field_name)
     # assert
-    assert type(field) == field_type
+    assert isinstance(field, field_type)
     assert get_default_value(field) == expected

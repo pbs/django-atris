@@ -8,7 +8,6 @@ from django.utils.timezone import now
 
 from atris.models import get_history_model
 
-
 logger = logging.getLogger("old_history_archiving")
 HistoricalRecord = get_history_model()
 

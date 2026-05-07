@@ -14,12 +14,14 @@ This app requires:
     - for Django >= 3.2 < 4.0           please use django-atris = 2.0.1
     - for Django >= 3.2.19 <= 4.2.6     please use django-atris = 2.0.2
     - for Django >= 4 < 5               please use django-atris = 2.0.3
+    - for Django >= 5 < 6               please use django-atris = 2.0.4
 - Postgresql
 - Python:
     - for django-atris < 2.0.0          please use Python >= 2.7 or Python >= 3.4 (after Django 2)
     - for django-atris >= 2.0.0         please use Python >= 3.6
     - for django-atris == 2.0.1         please use Python >= 3.7
     - for django-atris >= 2.0.2         please use Python >= 3.8
+    - for django-atris >= 2.0.4         please use Python >= 3.10
 
 Integration guide
 -----------------
@@ -209,39 +211,44 @@ Example of usage in code:
 Changelog
 -----------
 
-1.2.2:
-    * Django 1.10 compatible
+2.0.4:
+    * Added support for Django 5 (tested up to 5.2.8)
+    * Dropped support for Django 4
+    * Dropped support for Python < 3.10
 
-1.3.0:
-    * Django 2 compatible
-
-1.3.1:
-    * suppress approximate count. TODO
-
-1.3.2:
-    * Django 2.1 compatible
-
-1.3.3:
-    * Evaluate translation lazy translation text for a field's verbose name
-
-1.3.4:
-    * Add support for Django 2.2
-
-2.0.0:
-    * Dropped support for Django < 2.2 and Python < 3.6
-    * Fixed history generation issue after saving an instance for the first time after a new field was added to the model
-        - This issue was causing historical records to be generated when saving (without any changes) existing instances of tracked models
-
-2.0.1:
-    * Dropped support for Python < 3.7
-    * Added support for Django 3.2
-    * Move away from setup.py to pyproject.toml
+2.0.3:
+    * Dropped support for Django 3
+    * Extended support beyond 4.2.6 up to less than Django 5 (tested up to 4.2.7)
 
 2.0.2:
     * Dropped support for Django 2
     * Added support for Django 4 (tested up to 4.2.6)
     * Dropped support for python < 3.8
 
-2.0.3:
-    * Dropped support for Django 3
-    * Extended support beyond 4.2.6 up to less than Django 5 (tested up to 4.2.7)
+2.0.1:
+    * Dropped support for Python < 3.7
+    * Added support for Django 3.2
+    * Move away from setup.py to pyproject.toml
+
+2.0.0:
+    * Dropped support for Django < 2.2 and Python < 3.6
+    * Fixed history generation issue after saving an instance for the first time after a new field was added to the model
+        - This issue was causing historical records to be generated when saving (without any changes) existing instances of tracked models
+
+1.3.4:
+    * Add support for Django 2.2
+
+1.3.3:
+    * Evaluate translation lazy translation text for a field's verbose name
+
+1.3.2:
+    * Django 2.1 compatible
+
+1.3.1:
+    * suppress approximate count. TODO
+
+1.3.0:
+    * Django 2 compatible
+
+1.2.2:
+    * Django 1.10 compatible

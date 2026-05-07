@@ -11,7 +11,6 @@ from django.db.models import JSONField, Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -197,7 +196,7 @@ class AbstractHistoricalRecord(models.Model):
         app_label = "atris"
         ordering = ["-history_date"]
         abstract = True
-        index_together = ["object_id", "history_date"]
+        indexes = [models.Index(fields=["object_id", "history_date"])]
 
     @property
     def previous_version(self):

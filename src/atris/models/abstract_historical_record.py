@@ -196,7 +196,10 @@ class AbstractHistoricalRecord(models.Model):
         app_label = "atris"
         ordering = ["-history_date"]
         abstract = True
-        indexes = [models.Index(fields=["object_id", "history_date"])]
+        indexes = [
+            models.Index(fields=["object_id", "history_date"]),
+            models.Index(fields=["content_type", "-history_date"]),
+        ]
 
     @property
     def previous_version(self):

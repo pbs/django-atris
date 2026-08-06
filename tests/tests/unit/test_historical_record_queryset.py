@@ -3,7 +3,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from pytest import fail, mark
 
-from atris.models import HistoricalRecord
+from atris.models import ArchivedHistoricalRecord, HistoricalRecord
 from tests.factories import ChoiceFactory, PollFactory, VoterFactory
 from tests.models import Choice, Episode, Poll, Special
 
@@ -90,3 +90,13 @@ def test_historical_records_approx_count_does_not_raise():
         HistoricalRecord.objects.approx_count()
     except Exception:
         fail("HistoricalRecord.objects.approx_count() should not raise any error!")
+
+
+@mark.django_db(transaction=True)
+@mark.parametrize("model", [HistoricalRecord, ArchivedHistoricalRecord])
+def test_approx_count_returns_an_int(model):
+    """
+    The value may be -1 on PostgreSQL 14+ when the table has never been
+    analyzed, but it is always an int so callers can compare it numerically.
+    """
+    assert isinstance(model.objects.approx_count(), int)

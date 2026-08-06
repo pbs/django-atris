@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import FieldDoesNotExist
-from django.db import connection, models
+from django.db import connections, models
 from django.db.models import JSONField, Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
@@ -123,19 +123,21 @@ class HistoricalRecordQuerySet(QuerySet):
         This is required because postgresql count(*) has to go through
         all the entries in the database, making it extremely slow for
         large tables.
-        :return: int representing approx count(*)
+
+        Note that the count is approximate and only as fresh as the last
+        ANALYZE on the table. On PostgreSQL 14+ it is -1 when the table has
+        never been analyzed, which is how "unknown" is distinguished from
+        "no rows"; callers must not treat that as a row count.
+
+        :return: int representing approx count(*), or -1 if unknown
         """
-        table_name = self.model._meta.db_table
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT reltuples "
-            "FROM pg_class "
-            "WHERE relname='{}';".format(
-                table_name,
-            ),
-        )
-        row = cursor.fetchone()
-        return int(row[0])
+        with connections[self.db].cursor() as cursor:
+            cursor.execute(
+                "SELECT reltuples FROM pg_class WHERE relname = %s",
+                [self.model._meta.db_table],
+            )
+            row = cursor.fetchone()
+        return int(row[0]) if row else 0
 
 
 class AbstractHistoricalRecord(models.Model):

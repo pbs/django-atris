@@ -211,6 +211,11 @@ Example of usage in code:
 Changelog
 -----------
 
+2.0.5:
+    * Removed the unused ``ApproxCountPgQuerySet``, which had been unwired since 1.3.1 and no longer worked on modern Django
+    * The history admin now paginates using an approximate row count on unfiltered changelists, for faster page loads on large history tables
+        - Exact counts are still used when filters are applied or when the table is small
+
 2.0.4:
     * Added support for Django 5 (tested up to 5.2.8)
     * Dropped support for Django 4

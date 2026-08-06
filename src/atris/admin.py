@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
-from django.db import connections, models
+from django.core.paginator import Paginator
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
@@ -45,45 +46,44 @@ class ContentTypeListFilter(admin.SimpleListFilter):
             return queryset.filter(content_type__id=self.value())
 
 
-class ApproxCountPgQuerySet(models.query.QuerySet):
-    """approximate unconstrained count(*) with reltuples from pg_class"""
+class ApproxCountPaginator(Paginator):
+    """
+    Paginator that substitutes a fast approximate row count for the exact
+    ``COUNT(*)`` when the changelist is unfiltered.
 
+    PostgreSQL has to walk the whole table for an exact count, which makes the
+    admin changelist very slow on large history tables.
+    """
+
+    #: Below this many rows an exact ``COUNT(*)`` is cheap, so prefer accuracy.
+    approx_count_min = 10000
+
+    @cached_property
     def count(self):
-        if hasattr(connections[self.db].client.connection, "pg_version"):
-            query = self.query
-            no_filtration_used = (
-                not query.where
-                and query.high_mark is None
-                and query.low_mark == 0
-                and not query.select
-                and not query.group_by
-                and not query.having
-                and not query.distinct
-            )
-            if no_filtration_used:
-                parts = [p.strip('"') for p in self.model._meta.db_table.split(".")]
-                if 1 <= len(parts) <= 2:
-                    cursor = connections[self.db].cursor()
-                    if len(parts) == 1:
-                        cursor.execute(
-                            "SELECT reltuples::bigint "
-                            "FROM pg_class "
-                            "WHERE relname = %s",
-                            parts,
-                        )
-                    else:
-                        cursor.execute(
-                            "SELECT reltuples::bigint "
-                            "FROM pg_class c "
-                            "JOIN pg_namespace n on (c.relnamespace = n.oid) "
-                            "WHERE n.nspname = %s AND c.relname = %s",
-                            parts,
-                        )
-                    return cursor.fetchall()[0][0]
-        return self.query.get_count(using=self.db)
+        queryset = self.object_list
+        if hasattr(queryset, "approx_count") and self._is_unfiltered(queryset):
+            approx = queryset.approx_count()
+            # `reltuples` is -1 on PostgreSQL 14+ for a table that has never
+            # been analyzed, and is unreliable for small tables.
+            if approx >= self.approx_count_min:
+                return approx
+        return super().count
+
+    @staticmethod
+    def _is_unfiltered(queryset):
+        query = queryset.query
+        return (
+            not query.where
+            and not query.group_by
+            and not query.distinct
+            and query.high_mark is None
+            and query.low_mark == 0
+        )
 
 
 class GenericHistoryAdmin(admin.ModelAdmin):
+    paginator = ApproxCountPaginator
+
     list_display = (
         "object_id",
         "content_type",

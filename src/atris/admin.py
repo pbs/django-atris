@@ -155,7 +155,11 @@ class GenericHistoryAdmin(admin.ModelAdmin):
             )
             absolute_uri = self._request.build_absolute_uri(related_url)
             related_object_model = obj.related_field_history.content_type.model
-            html = f'<a href="{absolute_uri}">{obj.additional_data[related_object_model]}</a>'
+            html = (
+                f'<a href="{absolute_uri}">'
+                f'{obj.additional_data[related_object_model]}'
+                f'</a>'
+            )
             return mark_safe(html)
         else:
             return "--"

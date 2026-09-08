@@ -183,7 +183,11 @@ class AbstractHistoricalRecord(models.Model):
     objects = HistoricalRecordQuerySet.as_manager()
 
     def __str__(self):
-        return f"{self.get_history_type_display()} {self.content_type.model} id={self.object_id}"
+        return (
+            f"{self.get_history_type_display()} "
+            f"{self.content_type.model} "
+            f"id={self.object_id}"
+        )
 
     class Meta:
         app_label = "atris"

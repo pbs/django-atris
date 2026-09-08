@@ -130,8 +130,9 @@ class HistoryLogging:
         def getter(instance):
             if not hasattr(instance, property_name):
                 logger.debug(
-                    f"{property_name} not defined on {instance.__class__.__name__}. Getting class default from "
-                    f"property: {self.class_additional_data_name}",
+                    f"{property_name} not defined on {instance.__class__.__name__}. "
+                    f"Getting class default "
+                    f"from property: {self.class_additional_data_name}",
                 )
                 default = getattr(instance, self.class_additional_data_name)
                 setattr(instance, property_name, copy(default))
@@ -562,8 +563,8 @@ class HistoryEnabledRelatedObjectsCollector:
             related_objects = list(referenced_object.all())
         else:
             raise TypeError(
-                f"Field {self.field} did not match any known related field types. Known "
-                "types: 1-to-1, 1-to-many, many-to-1, many-to-many."
+                f"Field {self.field} did not match any known related field "
+                f"types. Known types: 1-to-1, 1-to-many, many-to-1, many-to-many."
             )
         return related_objects
 

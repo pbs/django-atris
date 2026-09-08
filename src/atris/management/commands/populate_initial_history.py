@@ -95,7 +95,8 @@ class ModelHistoryCreator:
         objects = self.model.objects
         number_of_batches = ceil(objects.count() / self.select_batch_size)
         self.output.write(
-            f"Processing data in {number_of_batches} batches of {self.select_batch_size} target objects.\n",
+            f"Processing data in {number_of_batches} batches "
+            f"of {self.select_batch_size} target objects.\n",
         )
         for multiplicity in range(number_of_batches):
             start = self.select_batch_size * multiplicity

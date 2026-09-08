@@ -24,6 +24,9 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
+      - name: Code checks
+        run: ./scripts/code_checks/run_code_checks.sh --show-diff-on-failure
+
       - name: Upload package
         run: |
           pip install --upgrade pip

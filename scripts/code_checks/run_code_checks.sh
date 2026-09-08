@@ -16,5 +16,5 @@ cd $DJANGO_ATRIS_DIR  # cd to django-atris directory
 docker build . --file="./Dockerfile_precommit" --tag="django_atris_code_checks:latest"
 
 # run pre-commit on all files with all the other arguments passed along to this script
-docker run --rm -v $PWD:/django_atris django_atris_code_checks:latest bash -c \
+docker run --rm -v $PWD:/django-atris django_atris_code_checks:latest bash -c \
     "pre-commit run --all-files $*"

@@ -1,5 +1,6 @@
 from .settings import *  # noqa: F403
 
+
 INSTALLED_APPS.extend(['django.contrib.postgres', 'atris', 'tests'])  # noqa: F405
 
 MIDDLEWARE.extend(['atris.middleware.LoggingRequestMiddleware'])  # noqa: F405

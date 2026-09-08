@@ -11,6 +11,7 @@ from .exceptions import InvalidRelatedField
 from .helpers import from_writable_db, get_diff_fields, get_instance_field_data
 from .historical_record import get_history_model
 
+
 registered_models = {}
 logger = logging.getLogger(__name__)
 HistoricalRecord = get_history_model()
@@ -39,7 +40,6 @@ class HistoryManager:
 
 # noinspection PyProtectedMember,PyAttributeOutsideInit
 class HistoryLogging:
-
     thread = threading.local()
     _cleared_related_objects = dict()
 
@@ -98,10 +98,7 @@ class HistoryLogging:
                 additional_data_value,
             )
             logger.debug(
-                "Set class attribute {}.{}".format(
-                    class_name,
-                    self.class_additional_data_name,
-                ),
+                f"Set class attribute {class_name}.{self.class_additional_data_name}",
             )
             default_data_param_name = "default_" + self.additional_data_param_name
             setattr(
@@ -110,10 +107,7 @@ class HistoryLogging:
                 self.default_additional_data_property_maker(),
             )
             logger.debug(
-                "Set property {}.{}".format(
-                    class_name,
-                    default_data_param_name,
-                ),
+                f"Set property {class_name}.{default_data_param_name}",
             )
             setattr(
                 cls,
@@ -121,10 +115,7 @@ class HistoryLogging:
                 self.additional_data_property_maker(),
             )
             logger.debug(
-                "Set property {}.{}".format(
-                    class_name,
-                    self.additional_data_param_name,
-                ),
+                f"Set property {class_name}.{self.additional_data_param_name}",
             )
 
     def default_additional_data_property_maker(self):
@@ -139,12 +130,8 @@ class HistoryLogging:
         def getter(instance):
             if not hasattr(instance, property_name):
                 logger.debug(
-                    "{} not defined on {}. Getting class default from "
-                    "property: {}".format(
-                        property_name,
-                        instance.__class__.__name__,
-                        self.class_additional_data_name,
-                    ),
+                    f"{property_name} not defined on {instance.__class__.__name__}. Getting class default from "
+                    f"property: {self.class_additional_data_name}",
                 )
                 default = getattr(instance, self.class_additional_data_name)
                 setattr(instance, property_name, copy(default))
@@ -174,10 +161,7 @@ class HistoryLogging:
             field = cls._meta.get_field(field_name)
             if not field.is_relation:
                 raise InvalidRelatedField(
-                    "{} is not a related field on {}".format(
-                        field.name,
-                        cls,
-                    ),
+                    f"{field.name} is not a related field on {cls}",
                 )
 
     def register_signal_handlers(self, sender):
@@ -365,11 +349,8 @@ class HistoricalRecordGenerator:
     def __call__(self):
         if self.should_skip_history_for_user():
             logger.info(
-                "Skipping history instance for user '{}' "
-                "with user id '{}'".format(
-                    self.user_name,
-                    self.user_id,
-                )
+                f"Skipping history instance for user '{self.user_name}' "
+                f"with user id '{self.user_id}'"
             )
             return
         data = get_instance_field_data(self.instance)
@@ -523,9 +504,7 @@ class InterestedObjectHistoryGenerator:
             action = "Removed"
         else:
             action = self.instance_history.get_history_type_display() + "d"
-        additional_data[instance_name] = "{action} {object_type}".format(
-            action=action, object_type=instance_class_name
-        )
+        additional_data[instance_name] = f"{action} {instance_class_name}"
         HistoricalRecord.objects.create(
             content_object=interested_object,
             history_type=HistoricalRecord.UPDATE,
@@ -539,7 +518,6 @@ class InterestedObjectHistoryGenerator:
 
 
 class HistoryEnabledRelatedObjectsCollector:
-
     ADDED = True
     REMOVED = False
     UNMODIFIED = None
@@ -584,8 +562,8 @@ class HistoryEnabledRelatedObjectsCollector:
             related_objects = list(referenced_object.all())
         else:
             raise TypeError(
-                "Field {} did not match any known related field types. Known "
-                "types: 1-to-1, 1-to-many, many-to-1, many-to-many.".format(self.field)
+                f"Field {self.field} did not match any known related field types. Known "
+                "types: 1-to-1, 1-to-many, many-to-1, many-to-many."
             )
         return related_objects
 

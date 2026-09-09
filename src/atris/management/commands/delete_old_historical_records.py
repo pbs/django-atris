@@ -4,6 +4,7 @@ from django.core.management import BaseCommand
 
 from atris.models import ArchivedHistoricalRecord, get_history_model
 
+
 logger = logging.getLogger("old_history_deleting")
 HistoricalRecord = get_history_model()
 

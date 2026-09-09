@@ -66,9 +66,7 @@ class ApproxCountPgQuerySet(models.query.QuerySet):
                     cursor = connections[self.db].cursor()
                     if len(parts) == 1:
                         cursor.execute(
-                            "SELECT reltuples::bigint "
-                            "FROM pg_class "
-                            "WHERE relname = %s",
+                            "SELECT reltuples::bigint FROM pg_class WHERE relname = %s",
                             parts,
                         )
                     else:
@@ -139,11 +137,8 @@ class GenericHistoryAdmin(admin.ModelAdmin):
             '<table style="border: 1px solid #eee;">'
             + "".join(
                 [
-                    '<tr><td style="border: 1px solid #eee;">{}</td> <td>{}'
-                    "</td></tr>".format(
-                        key,
-                        val,
-                    )
+                    f'<tr><td style="border: 1px solid #eee;">{key}</td> <td>{val}'
+                    "</td></tr>"
                     for (key, val) in dictionary.items()
                 ]
             )
@@ -160,9 +155,10 @@ class GenericHistoryAdmin(admin.ModelAdmin):
             )
             absolute_uri = self._request.build_absolute_uri(related_url)
             related_object_model = obj.related_field_history.content_type.model
-            html = '<a href="{}">{}</a>'.format(
-                absolute_uri,
-                obj.additional_data[related_object_model],
+            html = (
+                f'<a href="{absolute_uri}">'
+                f'{obj.additional_data[related_object_model]}'
+                f'</a>'
             )
             return mark_safe(html)
         else:

@@ -5,8 +5,7 @@ from tests.models import Actor, Episode, Episode2, Group, Special, Writer
 
 
 @mark.parametrize(
-    "instance_model, related_model, reverse_relationship, expected_name, "
-    "description",
+    "instance_model, related_model, reverse_relationship, expected_name, description",
     [
         (
             Episode,

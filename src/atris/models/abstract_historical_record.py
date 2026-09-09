@@ -11,6 +11,7 @@ from django.db.models import JSONField, Q
 from django.db.models.query import QuerySet
 from django.utils.timezone import now
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -128,11 +129,7 @@ class HistoricalRecordQuerySet(QuerySet):
         table_name = self.model._meta.db_table
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT reltuples "
-            "FROM pg_class "
-            "WHERE relname='{}';".format(
-                table_name,
-            ),
+            f"SELECT reltuples FROM pg_class WHERE relname='{table_name}';",
         )
         row = cursor.fetchone()
         return int(row[0])
@@ -186,10 +183,10 @@ class AbstractHistoricalRecord(models.Model):
     objects = HistoricalRecordQuerySet.as_manager()
 
     def __str__(self):
-        return "{history_type} {content_type} id={object_id}".format(
-            history_type=self.get_history_type_display(),
-            content_type=self.content_type.model,
-            object_id=self.object_id,
+        return (
+            f"{self.get_history_type_display()} "
+            f"{self.content_type.model} "
+            f"id={self.object_id}"
         )
 
     class Meta:

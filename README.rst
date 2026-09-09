@@ -14,7 +14,7 @@ This app requires:
     - for Django >= 3.2 < 4.0           please use django-atris = 2.0.1
     - for Django >= 3.2.19 <= 4.2.6     please use django-atris = 2.0.2
     - for Django >= 4 < 5               please use django-atris = 2.0.3
-    - for Django >= 5 < 6               please use django-atris = 2.0.4
+    - for Django >= 5 < 6               please use django-atris = 2.0.5
 - Postgresql
 - Python:
     - for django-atris < 2.0.0          please use Python >= 2.7 or Python >= 3.4 (after Django 2)
@@ -22,6 +22,7 @@ This app requires:
     - for django-atris == 2.0.1         please use Python >= 3.7
     - for django-atris >= 2.0.2         please use Python >= 3.8
     - for django-atris >= 2.0.4         please use Python >= 3.10
+    - for django-atris >= 2.0.5         please use Python >= 3.10
 
 Integration guide
 -----------------
@@ -210,6 +211,10 @@ Example of usage in code:
 
 Changelog
 -----------
+
+2.0.5:
+    * Replaced the existing linting tools with Ruff
+    * Added a linting check to the PyPI publishing workflow
 
 2.0.4:
     * Added support for Django 5 (tested up to 5.2.8)

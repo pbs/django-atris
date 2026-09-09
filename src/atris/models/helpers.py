@@ -2,8 +2,6 @@ import ast
 import json
 import re
 
-from typing import Dict, List, Optional, Type, Union
-
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import router
@@ -11,11 +9,11 @@ from django.db.models import Model
 
 
 def get_diff_fields(
-    model: Union[Model, Type[Model]],
-    data: Dict,
-    previous_data: Dict,
-    excluded_fields_names: List[str],
-) -> Optional[List[str]]:
+    model: Model | type[Model],
+    data: dict,
+    previous_data: dict,
+    excluded_fields_names: list[str],
+) -> list[str] | None:
     """
 
     Args:

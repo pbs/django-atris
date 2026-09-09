@@ -216,9 +216,7 @@ class TestGetHistoryModel:
 @mark.django_db
 def test_str_historical_record():
     hr = HistoricalRecordFactory.create()
-    expected = "{history_type} {content_type} id={object_id}".format(
-        history_type=hr.get_history_type_display(),
-        content_type=hr.content_type.model,
-        object_id=hr.object_id,
+    expected = (
+        f"{hr.get_history_type_display()} {hr.content_type.model} id={hr.object_id}"
     )
     assert str(hr) == expected

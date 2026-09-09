@@ -7,6 +7,7 @@ from django.db.transaction import atomic
 from atris.models import get_history_model, registered_models
 from atris.models.helpers import get_instance_field_data
 
+
 HistoricalRecord = get_history_model()
 
 
@@ -94,20 +95,15 @@ class ModelHistoryCreator:
         objects = self.model.objects
         number_of_batches = ceil(objects.count() / self.select_batch_size)
         self.output.write(
-            "Processing data in {} batches of {} target objects.\n".format(
-                number_of_batches,
-                self.select_batch_size,
-            ),
+            f"Processing data in {number_of_batches} batches "
+            f"of {self.select_batch_size} target objects.\n",
         )
         for multiplicity in range(number_of_batches):
             start = self.select_batch_size * multiplicity
             end = start + self.select_batch_size
             self.create_history_for_objects(objects.all()[start:end])
             self.output.write(
-                "Finished batch #{} of {}.\n".format(
-                    multiplicity + 1,
-                    number_of_batches,
-                ),
+                f"Finished batch #{multiplicity + 1} of {number_of_batches}.\n",
             )
 
     def create_history_for_objects(self, objects):

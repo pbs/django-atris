@@ -8,12 +8,12 @@ from django.utils.timezone import now
 
 from atris.models import get_history_model
 
+
 logger = logging.getLogger("old_history_archiving")
 HistoricalRecord = get_history_model()
 
 
 class Command(BaseCommand):
-
     help = """
         Archives historical records older than the specified days or months.
         You must supply either the days or the weeks param.
@@ -71,19 +71,13 @@ class Command(BaseCommand):
             [field.attname for field in HistoricalRecord._meta.fields]
         )
         query = (
-            "INSERT INTO atris_archivedhistoricalrecord ({}) "
-            "SELECT {} FROM atris_historicalrecord "
-            "WHERE history_date < '{}';".format(
-                fields_str,
-                fields_str,
-                older_than_date.date(),
-            )
+            f"INSERT INTO atris_archivedhistoricalrecord ({fields_str}) "
+            f"SELECT {fields_str} FROM atris_historicalrecord "
+            f"WHERE history_date < '{older_than_date.date()}';"
         )
         cursor.execute(query)
         query = (
             "DELETE FROM atris_historicalrecord "
-            "WHERE history_date < '{}';".format(
-                older_than_date.date(),
-            )
+            f"WHERE history_date < '{older_than_date.date()}';"
         )
         cursor.execute(query)
